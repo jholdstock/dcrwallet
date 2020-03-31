@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"decred.org/dcrwallet/chain"
@@ -106,10 +107,12 @@ func run(ctx context.Context) error {
 	}
 
 	// Run the pprof profiler if enabled.
-	if len(cfg.Profile) > 0 {
+	if len(cfg.Profile) > 0 && len(cfg.Profile[0]) > 0 {
 		if done(ctx) {
 			return ctx.Err()
 		}
+
+		cfg.Profile = strings.Split(cfg.Profile[0], ",")
 
 		profileRedirect := http.RedirectHandler("/debug/pprof", http.StatusSeeOther)
 		http.Handle("/", profileRedirect)

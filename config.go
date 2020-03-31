@@ -805,6 +805,10 @@ func loadConfig(ctx context.Context) (*config, []string, error) {
 		fmt.Fprintln(os.Stderr, err)
 		return loadConfigError(err)
 	}
+	if len(cfg.SPVConnect) > 0 {
+		cfg.SPVConnect = strings.Split(cfg.SPVConnect[0], ",")
+	}
+
 	for i, p := range cfg.SPVConnect {
 		cfg.SPVConnect[i], err = cfgutil.NormalizeAddress(p, activeNet.Params.DefaultPort)
 		if err != nil {
@@ -840,6 +844,7 @@ func loadConfig(ctx context.Context) (*config, []string, error) {
 
 	// Add default port to all rpc listener addresses if needed and remove
 	// duplicate addresses.
+	cfg.LegacyRPCListeners = strings.Split(cfg.LegacyRPCListeners[0], ",")
 	cfg.LegacyRPCListeners, err = cfgutil.NormalizeAddresses(
 		cfg.LegacyRPCListeners, activeNet.JSONRPCServerPort)
 	if err != nil {
@@ -847,6 +852,7 @@ func loadConfig(ctx context.Context) (*config, []string, error) {
 			"Invalid network address in legacy RPC listeners: %v\n", err)
 		return loadConfigError(err)
 	}
+	cfg.GRPCListeners = strings.Split(cfg.GRPCListeners[0], ",")
 	cfg.GRPCListeners, err = cfgutil.NormalizeAddresses(
 		cfg.GRPCListeners, activeNet.GRPCServerPort)
 	if err != nil {
