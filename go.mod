@@ -27,6 +27,8 @@ require (
 	github.com/decred/go-socks v1.1.0
 	github.com/decred/slog v1.2.0
 	github.com/golang/protobuf v1.4.2
+	github.com/decred/vspd/client v1.0.0
+	github.com/decred/vspd/types v1.1.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/jessevdk/go-flags v1.4.1-0.20200711081900-c17162fe8fd7
 	github.com/jrick/bitset v1.0.0
