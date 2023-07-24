@@ -900,32 +900,7 @@ func (fp *feePayment) confirmPayment() (err error) {
 		log.Criticalf("Rescheduling status check for %v: %v", &fp.ticketHash, err)
 	}
 	if err != nil {
-		log.Criticalf("%s: fp.confirmPayment status error: %v", fp.ticketHash, err)
-
-		// Stop processing if the status check cannot be performed, but
-		// a significant amount of confirmations are observed on the fee
-		// transaction.
-		//
-		// Otherwise, chedule another confirmation check, in case the
-		// status API can be performed at a later time or more
-		// confirmations are observed.
-		fp.mu.Lock()
-		feeHash := fp.feeHash
-		fp.mu.Unlock()
-		confs, err := w.TxConfirms(ctx, &feeHash)
-		if err != nil {
-			return err
-		}
-		if confs >= 6 {
-			log.Criticalf("%s: fp.confirmPayment 6 conf removal", fp.ticketHash)
-			fp.remove("confirmed")
-			log.Criticalf("%s: update status to Confirmed", fp.ticketHash)
-			err = w.UpdateVspTicketFeeToConfirmed(ctx, &fp.ticketHash, &feeHash, fp.client.URL, fp.client.PubKey)
-			if err != nil {
-				return err
-			}
-			return nil
-		}
+		log.Warnf("Rescheduling status check for %v: %v", &fp.ticketHash, err)
 		fp.schedule("confirm payment", fp.confirmPayment)
 		return nil
 	}
