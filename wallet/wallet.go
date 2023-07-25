@@ -3232,7 +3232,8 @@ func (w *Wallet) GetTicketsPrecise(ctx context.Context, rpcCaller Caller,
 // The arguments to f may be reused and should not be kept by the caller.
 //
 // Because this function does not have any chain client argument, tickets are
-// unable to be determined whether or not they have been missed, simply unspent.
+// unable to be determined whether or not they have been missed or simply
+// unspent.
 func (w *Wallet) GetTickets(ctx context.Context,
 	f func([]*TicketSummary, *wire.BlockHeader) (bool, error),
 	startBlock, endBlock *BlockIdentifier) error {
@@ -3257,7 +3258,7 @@ func (w *Wallet) GetTickets(ctx context.Context,
 					return false, errors.Errorf("%v while trying to get "+
 						"ticket details for txhash: %v", err, &details[i].Hash)
 				}
-				// Continue if not a ticket
+				// Continue if not a ticket.
 				if ticketInfo == nil {
 					continue
 				}
@@ -5813,7 +5814,7 @@ func (w *Wallet) ForUnspentUnexpiredTickets(ctx context.Context,
 			ticketHash := *ticketSummary.Ticket.Hash
 			err := f(&ticketHash)
 			if err != nil {
-				return false, err
+				continue
 			}
 		}
 
