@@ -110,7 +110,7 @@ func (c *Client) ProcessUnprocessedTickets(ctx context.Context) {
 		confirmed, err := c.wallet.IsVSPTicketConfirmed(ctx, hash)
 		if err != nil && !errors.Is(err, errors.NotExist) {
 			log.Criticalf("%s: No - IsVSPTicketConfirmed error: %v", hash, err)
-			log.Error(err)
+			log.Critical(err)
 			return nil
 		}
 
@@ -136,7 +136,7 @@ func (c *Client) ProcessUnprocessedTickets(ctx context.Context) {
 			err := c.Process(ctx, hash, nil)
 			if err != nil {
 				log.Criticalf("%s: Processing failed: %v", hash, err)
-				log.Error(err)
+				log.Critical(err)
 			} else {
 				log.Criticalf("%s: Processing complete", hash)
 			}
@@ -167,7 +167,7 @@ func (c *Client) ProcessManagedTickets(ctx context.Context) error {
 		confirmed, err := c.wallet.IsVSPTicketConfirmed(ctx, hash)
 		if err != nil && !errors.Is(err, errors.NotExist) {
 			log.Criticalf("%s: No - IsVSPTicketConfirmed error: %v", hash, err)
-			log.Error(err)
+			log.Critical(err)
 			return nil
 		}
 		if confirmed {
@@ -337,7 +337,7 @@ func (c *Client) SetVoteChoice(ctx context.Context, hash *chainhash.Hash,
 		if errors.Is(err, errors.Locked) {
 			return err
 		}
-		log.Errorf("Could not check status of VSP ticket %s: %v", hash, err)
+		log.Criticalf("Could not check status of VSP ticket %s: %v", hash, err)
 		return nil
 	}
 
@@ -385,11 +385,11 @@ func (c *Client) SetVoteChoice(ctx context.Context, hash *chainhash.Hash,
 	}
 
 	if !update {
-		log.Debugf("VSP already has correct vote choices for ticket %s", hash)
+		log.Criticalf("VSP already has correct vote choices for ticket %s", hash)
 		return nil
 	}
 
-	log.Debugf("Updating vote choices on VSP for ticket %s", hash)
+	log.Criticalf("Updating vote choices on VSP for ticket %s", hash)
 	err = c.setVoteChoices(ctx, hash, choices, tspendPolicy, treasuryPolicy)
 	if err != nil {
 		return err
