@@ -99,19 +99,23 @@ func (c *Client) FeePercentage(ctx context.Context) (float64, error) {
 func (c *Client) ProcessUnprocessedTickets(ctx context.Context) {
 	var wg sync.WaitGroup
 	c.wallet.ForUnspentUnexpiredTickets(ctx, func(hash *chainhash.Hash) error {
+		log.Criticalf("%s: Add unmanaged to client?", hash)
 		// Skip tickets which have a fee tx already associated with
 		// them; they are already processed by some vsp.
 		_, err := c.wallet.VSPFeeHashForTicket(ctx, hash)
 		if err == nil {
+			log.Criticalf("%s: No - already got fee", hash)
 			return nil
 		}
 		confirmed, err := c.wallet.IsVSPTicketConfirmed(ctx, hash)
 		if err != nil && !errors.Is(err, errors.NotExist) {
+			log.Criticalf("%s: No - IsVSPTicketConfirmed error: %v", hash, err)
 			log.Error(err)
 			return nil
 		}
 
 		if confirmed {
+			log.Criticalf("%s: No - already confirmed", hash)
 			return nil
 		}
 
@@ -120,6 +124,7 @@ func (c *Client) ProcessUnprocessedTickets(ctx context.Context) {
 		c.mu.Unlock()
 		if fp != nil {
 			// Already processing this ticket with the VSP.
+			log.Criticalf("%s: No - already processing", hash)
 			return nil
 		}
 
@@ -127,9 +132,13 @@ func (c *Client) ProcessUnprocessedTickets(ctx context.Context) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			log.Criticalf("%s: Yes - processing...", hash)
 			err := c.Process(ctx, hash, nil)
 			if err != nil {
+				log.Criticalf("%s: Processing failed: %v", hash, err)
 				log.Error(err)
+			} else {
+				log.Criticalf("%s: Processing complete", hash)
 			}
 		}()
 
@@ -153,13 +162,16 @@ func (c *Client) ProcessTicket(ctx context.Context, hash *chainhash.Hash) error 
 // tickets.
 func (c *Client) ProcessManagedTickets(ctx context.Context) error {
 	err := c.wallet.ForUnspentUnexpiredTickets(ctx, func(hash *chainhash.Hash) error {
+		log.Criticalf("%s: Add managed to client?", hash)
 		// We only want to process tickets that haven't been confirmed yet.
 		confirmed, err := c.wallet.IsVSPTicketConfirmed(ctx, hash)
 		if err != nil && !errors.Is(err, errors.NotExist) {
+			log.Criticalf("%s: No - IsVSPTicketConfirmed error: %v", hash, err)
 			log.Error(err)
 			return nil
 		}
 		if confirmed {
+			log.Criticalf("%s: No - already confirmed", hash)
 			return nil
 		}
 		c.mu.Lock()
@@ -167,6 +179,7 @@ func (c *Client) ProcessManagedTickets(ctx context.Context) error {
 		c.mu.Unlock()
 		if ok {
 			// Already processing this ticket with the VSP.
+			log.Criticalf("%s: No - already processing", hash)
 			return nil
 		}
 
@@ -175,6 +188,7 @@ func (c *Client) ProcessManagedTickets(ctx context.Context) error {
 		// for processing a new ticket.
 		status, err := c.status(ctx, hash)
 		if err != nil {
+			log.Criticalf("%s: No - status error: %v", hash, err)
 			if errors.Is(err, errors.Locked) {
 				return err
 			}
@@ -184,24 +198,33 @@ func (c *Client) ProcessManagedTickets(ctx context.Context) error {
 		if status.FeeTxStatus == "confirmed" {
 			feeHash, err := chainhash.NewHashFromStr(status.FeeTxHash)
 			if err != nil {
+				log.Criticalf("%s: No - NewHashFromStr error: %v", hash, err)
 				return err
 			}
+			log.Criticalf("%s: update status to Confirmed", hash)
 			err = c.wallet.UpdateVspTicketFeeToConfirmed(ctx, hash, feeHash, c.Client.URL, c.Client.PubKey)
 			if err != nil {
+				log.Criticalf("%s: No - UpdateVspTicketFeeToConfirmed error: %v", hash, err)
 				return err
 			}
+			log.Criticalf("%s: No - newly confirmed", hash)
 			return nil
 		} else if status.FeeTxHash != "" {
 			feeHash, err := chainhash.NewHashFromStr(status.FeeTxHash)
 			if err != nil {
+				log.Criticalf("%s: No - NewHashFromStr error: %v", hash, err)
 				return err
 			}
+			log.Criticalf("%s: update status to Paid", hash)
 			err = c.wallet.UpdateVspTicketFeeToPaid(ctx, hash, feeHash, c.Client.URL, c.Client.PubKey)
 			if err != nil {
+				log.Criticalf("%s: No - UpdateVspTicketFeeToPaid error: %v", hash, err)
 				return err
 			}
+			log.Criticalf("%s: Yes - adding (paid)...", hash)
 			_ = c.feePayment(ctx, hash, true)
 		} else {
+			log.Criticalf("%s: Yes - adding (unpaid)...", hash)
 			// Fee hasn't been paid at the provided VSP, so this should do that if needed.
 			_ = c.feePayment(ctx, hash, false)
 		}
@@ -220,10 +243,14 @@ func (c *Client) ProcessManagedTickets(ctx context.Context) error {
 // error.  The fee transaction is also recorded as unpublised in the wallet, and
 // the fee hash is associated with the ticket.
 func (c *Client) Process(ctx context.Context, ticketHash *chainhash.Hash, feeTx *wire.MsgTx) error {
+	log.Criticalf("%s: Processing...", ticketHash)
 	vspTicket, err := c.wallet.VSPTicketInfo(ctx, ticketHash)
 	if err != nil && !errors.Is(err, errors.NotExist) {
+		log.Criticalf("%s: VSPTicketInfo error", ticketHash, err)
 		return err
 	}
+	log.Criticalf("%s: VSPTicketInfo: %+v", ticketHash, vspTicket)
+
 	feeStatus := udb.VSPFeeProcessStarted // Will be used if the ticket isn't registered to the vsp yet.
 	if vspTicket != nil {
 		feeStatus = udb.FeeStatus(vspTicket.FeeTxStatus)
@@ -231,10 +258,13 @@ func (c *Client) Process(ctx context.Context, ticketHash *chainhash.Hash, feeTx 
 
 	switch feeStatus {
 	case udb.VSPFeeProcessStarted, udb.VSPFeeProcessErrored:
+		log.Criticalf("%s: Status Started/Errored", ticketHash)
 		// If VSPTicket has been started or errored then attempt to create a new fee
 		// transaction, submit it then confirm.
 		fp := c.feePayment(ctx, ticketHash, false)
 		if fp == nil {
+			log.Criticalf("%s: fp nil", ticketHash)
+			log.Criticalf("%s: update status to Errored", ticketHash)
 			err := c.wallet.UpdateVspTicketFeeToErrored(ctx, ticketHash, c.Client.URL, c.Client.PubKey)
 			if err != nil {
 				return err
@@ -248,6 +278,8 @@ func (c *Client) Process(ctx context.Context, ticketHash *chainhash.Hash, feeTx 
 		fp.mu.Unlock()
 		err := fp.receiveFeeAddress()
 		if err != nil {
+			log.Criticalf("%s: receiveFeeAddress error: %v", ticketHash, err)
+			log.Criticalf("%s: update status to Errored", ticketHash)
 			err := c.wallet.UpdateVspTicketFeeToErrored(ctx, ticketHash, c.Client.URL, c.Client.PubKey)
 			if err != nil {
 				return err
@@ -259,6 +291,8 @@ func (c *Client) Process(ctx context.Context, ticketHash *chainhash.Hash, feeTx 
 		}
 		err = fp.makeFeeTx(feeTx)
 		if err != nil {
+			log.Criticalf("%s: makeFeeTx error: %v", ticketHash, err)
+			log.Criticalf("%s: update status to Errored", ticketHash)
 			err := c.wallet.UpdateVspTicketFeeToErrored(ctx, ticketHash, c.Client.URL, c.Client.PubKey)
 			if err != nil {
 				return err
@@ -267,6 +301,7 @@ func (c *Client) Process(ctx context.Context, ticketHash *chainhash.Hash, feeTx 
 		}
 		return fp.submitPayment()
 	case udb.VSPFeeProcessPaid:
+		log.Criticalf("%s: Status Paid", ticketHash)
 		// If a VSP ticket has been paid, but confirm payment.
 		if len(vspTicket.Host) > 0 && vspTicket.Host != c.Client.URL {
 			// Cannot confirm a paid ticket that is already with another VSP.
@@ -274,6 +309,7 @@ func (c *Client) Process(ctx context.Context, ticketHash *chainhash.Hash, feeTx 
 		}
 		fp := c.feePayment(ctx, ticketHash, true)
 		if fp == nil {
+			log.Criticalf("%s: fp nil", ticketHash)
 			// Don't update VSPStatus to Errored if it was already paid or
 			// confirmed.
 			return fmt.Errorf("fee payment cannot be processed")
@@ -281,6 +317,7 @@ func (c *Client) Process(ctx context.Context, ticketHash *chainhash.Hash, feeTx 
 
 		return fp.confirmPayment()
 	case udb.VSPFeeProcessConfirmed:
+		log.Criticalf("%s: Status Confirmed", ticketHash)
 		// VSPTicket has already been confirmed, there is nothing to process.
 		return nil
 	}

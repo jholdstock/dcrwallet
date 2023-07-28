@@ -180,15 +180,18 @@ func (fp *feePayment) remove(reason string) {
 // feePayment returns an existing managed fee payment, or creates and begins
 // processing a fee payment for a ticket.
 func (c *Client) feePayment(ctx context.Context, ticketHash *chainhash.Hash, paidConfirmed bool) (fp *feePayment) {
+	log.Criticalf("%s: create feePayment (paidConfirmed=%t)", ticketHash, paidConfirmed)
 	c.mu.Lock()
 	fp = c.jobs[*ticketHash]
 	c.mu.Unlock()
 	if fp != nil {
+		log.Criticalf("%s: feePayment: already existed", ticketHash)
 		return fp
 	}
 
 	defer func() {
 		if fp == nil {
+			log.Criticalf("%s: feePayment: returned nil", ticketHash)
 			return
 		}
 		var schedule bool
@@ -219,12 +222,14 @@ func (c *Client) feePayment(ctx context.Context, ticketHash *chainhash.Hash, pai
 
 	// No VSP interaction is required for spent tickets.
 	if fp.ticketSpent() {
+		log.Criticalf("%s: feePayment: already spent", ticketHash)
 		fp.state = ticketSpent
 		return fp
 	}
 
 	ticket, err := c.tx(ctx, ticketHash)
 	if err != nil {
+		log.Criticalf("%s: feePayment: ticket tx error: %v", ticketHash, err)
 		log.Warnf("no ticket found for %v", ticketHash)
 		return nil
 	}
@@ -264,6 +269,7 @@ func (c *Client) feePayment(ctx context.Context, ticketHash *chainhash.Hash, pai
 
 	fee, err := c.tx(ctx, &feeHash)
 	if err != nil {
+		log.Criticalf("%s: feePayment: fee tx error: %v", ticketHash, err)
 		// A fee hash is recorded for this ticket, but was not found in
 		// the wallet.  This should not happen and may require manual
 		// intervention.
@@ -280,6 +286,7 @@ func (c *Client) feePayment(ctx context.Context, ticketHash *chainhash.Hash, pai
 	// If database has been updated to paid or confirmed status, we can forgo
 	// this step.
 	if !paidConfirmed {
+		log.Criticalf("%s: update status to Started", ticketHash)
 		err = w.UpdateVspTicketFeeToStarted(ctx, ticketHash, &feeHash, c.Client.URL, c.Client.PubKey)
 		if err != nil {
 			return fp
@@ -288,6 +295,9 @@ func (c *Client) feePayment(ctx context.Context, ticketHash *chainhash.Hash, pai
 		fp.state = unprocessed // XXX fee created, but perhaps not submitted with vsp.
 		fp.fee = -1            // XXX fee amount (not needed anymore?)
 	}
+
+	log.Criticalf("%s: feePayment: created", ticketHash)
+
 	return fp
 }
 
@@ -302,6 +312,7 @@ func (c *Client) tx(ctx context.Context, hash *chainhash.Hash) (*wire.MsgTx, err
 // Schedule a method to be executed.
 // Any currently-scheduled method is replaced.
 func (fp *feePayment) schedule(name string, method func() error) {
+	log.Criticalf("%s: scheduling %s", fp.ticketHash, method)
 	var delay time.Duration
 	if method != nil {
 		delay = fp.next()
@@ -578,6 +589,7 @@ func (fp *feePayment) makeFeeTx(tx *wire.MsgTx) error {
 	if err != nil {
 		return err
 	}
+	log.Criticalf("%s: update status to Paid", fp.ticketHash)
 	err = w.UpdateVspTicketFeeToPaid(ctx, &fp.ticketHash, &feeHash, fp.client.URL, fp.client.PubKey)
 	if err != nil {
 		return err
@@ -671,12 +683,13 @@ func (c *Client) setVoteChoices(ctx context.Context, ticketHash *chainhash.Hash,
 func (fp *feePayment) reconcilePayment() error {
 	ctx := fp.ctx
 	w := fp.client.wallet
-
+	log.Criticalf("%s: fp.reconcilePayment", fp.ticketHash)
 	// stop processing if ticket is expired or spent
 	// XXX if ticket is no longer saved by wallet (because the tx expired,
 	// or was double spent, etc) remove the fee payment.
 	if fp.removedExpiredOrSpent() {
 		// nothing scheduled
+		log.Criticalf("%s: fp.reconcilePayment spent/expired", fp.ticketHash)
 		return errStopped
 	}
 
@@ -689,8 +702,10 @@ func (fp *feePayment) reconcilePayment() error {
 	feeTx := fp.feeTx
 	fp.mu.Unlock()
 	if feeTx == nil || len(feeTx.TxOut) == 0 {
+		log.Criticalf("%s: fp.reconcilePayment making new fee", fp.ticketHash)
 		err := fp.makeFeeTx(nil)
 		if err != nil {
+			log.Criticalf("%s: fp.reconcilePayment new fee failed: %v", fp.ticketHash, err)
 			var apiErr types.ErrorResponse
 			if errors.As(err, &apiErr) && apiErr.Code == types.ErrTicketCannotVote {
 				fp.remove("ticket cannot vote")
@@ -718,16 +733,20 @@ func (fp *feePayment) reconcilePayment() error {
 	if errors.As(err, &apiErr) {
 		switch apiErr.Code {
 		case types.ErrFeeAlreadyReceived:
+			log.Criticalf("%s: reconcilePayment submit ErrFeeAlreadyReceived", fp.ticketHash)
 			err = w.SetPublished(ctx, &feeHash, true)
 			if err != nil {
 				return err
 			}
+			log.Criticalf("%s: update status to Paid", fp.ticketHash)
 			err = w.UpdateVspTicketFeeToPaid(ctx, &fp.ticketHash, &feeHash, fp.client.URL, fp.client.PubKey)
 			if err != nil {
 				return err
 			}
 			err = nil
 		case types.ErrInvalidFeeTx, types.ErrCannotBroadcastFee:
+			log.Criticalf("%s: reconcilePayment submit ErrInvalidFeeTx/ErrCannotBroadcastFee", fp.ticketHash)
+			log.Criticalf("%s: update status to Errored", fp.ticketHash)
 			err := w.UpdateVspTicketFeeToErrored(ctx, &fp.ticketHash, fp.client.URL, fp.client.PubKey)
 			if err != nil {
 				return err
@@ -746,6 +765,7 @@ func (fp *feePayment) reconcilePayment() error {
 		return err
 	}
 
+	log.Criticalf("%s: update status to Paid", fp.ticketHash)
 	err = w.UpdateVspTicketFeeToPaid(ctx, &fp.ticketHash, &feeHash, fp.client.URL, fp.client.PubKey)
 	if err != nil {
 		return err
@@ -769,9 +789,12 @@ func (fp *feePayment) submitPayment() (err error) {
 	ctx := fp.ctx
 	w := fp.client.wallet
 
+	log.Criticalf("%s: fp.submitPayment", fp.ticketHash)
+
 	// stop processing if ticket is expired or spent
 	if fp.removedExpiredOrSpent() {
 		// nothing scheduled
+		log.Criticalf("%s: fp.submitPayment spent/expired", fp.ticketHash)
 		return errStopped
 	}
 
@@ -799,6 +822,8 @@ func (fp *feePayment) submitPayment() (err error) {
 		fp.mu.Unlock()
 	}
 
+	log.Criticalf("%s: fp.submitPayment getting preferences", fp.ticketHash)
+
 	// Retrieve voting preferences
 	voteChoices := make(map[string]string)
 	agendaChoices, _, err := w.AgendaChoices(ctx, &fp.ticketHash)
@@ -824,8 +849,10 @@ func (fp *feePayment) submitPayment() (err error) {
 		TreasuryPolicy: w.TreasuryKeyPolicyForTicket(&fp.ticketHash),
 	}
 
+	log.Criticalf("%s: fp.submitPayment paying fee", fp.ticketHash)
 	_, err = fp.client.PayFee(ctx, req, fp.commitmentAddr)
 	if err != nil {
+		log.Criticalf("%s: fp.submitPayment pay fee failed: %v", fp.ticketHash, err)
 		var apiErr types.ErrorResponse
 		if errors.As(err, &apiErr) && apiErr.Code == types.ErrFeeExpired {
 			// Fee has been expired, so abandon current feetx, set fp.feeTx
@@ -852,9 +879,12 @@ func (fp *feePayment) confirmPayment() (err error) {
 	ctx := fp.ctx
 	w := fp.client.wallet
 
+	log.Criticalf("%s: fp.confirmPayment", fp.ticketHash)
+
 	// stop processing if ticket is expired or spent
 	if fp.removedExpiredOrSpent() {
 		// nothing scheduled
+		log.Criticalf("%s: fp.confirmPayment spent/expired", fp.ticketHash)
 		return errStopped
 	}
 
@@ -870,6 +900,8 @@ func (fp *feePayment) confirmPayment() (err error) {
 		log.Warnf("Rescheduling status check for %v: %v", &fp.ticketHash, err)
 	}
 	if err != nil {
+		log.Criticalf("%s: fp.confirmPayment status error: %v", fp.ticketHash, err)
+
 		// Stop processing if the status check cannot be performed, but
 		// a significant amount of confirmations are observed on the fee
 		// transaction.
@@ -885,7 +917,9 @@ func (fp *feePayment) confirmPayment() (err error) {
 			return err
 		}
 		if confs >= 6 {
+			log.Criticalf("%s: fp.confirmPayment 6 conf removal", fp.ticketHash)
 			fp.remove("confirmed")
+			log.Criticalf("%s: update status to Confirmed", fp.ticketHash)
 			err = w.UpdateVspTicketFeeToConfirmed(ctx, &fp.ticketHash, &feeHash, fp.client.URL, fp.client.PubKey)
 			if err != nil {
 				return err
@@ -896,35 +930,43 @@ func (fp *feePayment) confirmPayment() (err error) {
 		return nil
 	}
 
+	log.Criticalf("%s: fp.confirmPayment vsp status: %+v", fp.ticketHash, status)
+
 	switch status.FeeTxStatus {
 	case "received":
+		log.Criticalf("%s: fp.confirmPayment status received", fp.ticketHash)
 		// VSP has received the fee tx but has not yet broadcast it.
 		// VSP will only broadcast the tx when ticket has 6+ confirmations.
 		fp.schedule("confirm payment", fp.confirmPayment)
 		return nil
 	case "broadcast":
+		log.Criticalf("%s: fp.confirmPayment status broadcast", fp.ticketHash)
 		log.Infof("VSP has successfully sent the fee tx for %v", &fp.ticketHash)
 		// Broadcasted, but not confirmed.
 		fp.schedule("confirm payment", fp.confirmPayment)
 		return nil
 	case "confirmed":
+		log.Criticalf("%s: fp.confirmPayment status confirmed", fp.ticketHash)
 		fp.remove("confirmed by VSP")
 		// nothing scheduled
 		fp.mu.Lock()
 		feeHash := fp.feeHash
 		fp.mu.Unlock()
+		log.Criticalf("%s: update status to Confirmed", fp.ticketHash)
 		err = w.UpdateVspTicketFeeToConfirmed(ctx, &fp.ticketHash, &feeHash, fp.client.URL, fp.client.PubKey)
 		if err != nil {
 			return err
 		}
 		return nil
 	case "error":
+		log.Criticalf("%s: fp.confirmPayment status error", fp.ticketHash)
 		log.Warnf("VSP failed to broadcast feetx for %v -- restarting payment",
 			&fp.ticketHash)
 		fp.schedule("reconcile payment", fp.reconcilePayment)
 		return nil
 	default:
 		// XXX put in unknown state
+		log.Criticalf("%s: fp.confirmPayment status unknown", fp.ticketHash)
 		log.Warnf("VSP responded with %v for %v", status.FeeTxStatus,
 			&fp.ticketHash)
 	}
