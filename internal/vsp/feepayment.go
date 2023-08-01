@@ -903,7 +903,7 @@ func (fp *feePayment) confirmPayment() (err error) {
 		log.Criticalf("Rescheduling status check for %v: %v", &fp.ticketHash, err)
 	}
 	if err != nil {
-		log.Warnf("Rescheduling status check for %v: %v", &fp.ticketHash, err)
+		log.Criticalf("Rescheduling status check for %v: %v", &fp.ticketHash, err)
 		fp.schedule("confirm payment", fp.confirmPayment)
 		return nil
 	}
