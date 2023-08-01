@@ -190,6 +190,7 @@ func (c *Client) feePayment(ctx context.Context, ticketHash *chainhash.Hash, pai
 	}
 
 	defer func() {
+		log.Criticalf("%s: feePayment: run deferred", ticketHash)
 		if fp == nil {
 			log.Criticalf("%s: feePayment: returned nil", ticketHash)
 			return
@@ -262,6 +263,7 @@ func (c *Client) feePayment(ctx context.Context, ticketHash *chainhash.Hash, pai
 	}
 	feeHash, err := w.VSPFeeHashForTicket(ctx, ticketHash)
 	if err != nil {
+		log.Criticalf("%s: feePayment: VSPFeeHashForTicket error: %v", ticketHash, err)
 		// caller must schedule next method, as paying the fee may
 		// require using provided transaction inputs.
 		return fp
@@ -286,9 +288,10 @@ func (c *Client) feePayment(ctx context.Context, ticketHash *chainhash.Hash, pai
 	// If database has been updated to paid or confirmed status, we can forgo
 	// this step.
 	if !paidConfirmed {
-		log.Criticalf("%s: update status to Started", ticketHash)
+		log.Criticalf("%s: feePayment update status to Started", ticketHash)
 		err = w.UpdateVspTicketFeeToStarted(ctx, ticketHash, &feeHash, c.Client.URL, c.Client.PubKey)
 		if err != nil {
+			log.Criticalf("%s: feePayment: UpdateVspTicketFeeToStarted error: %v", ticketHash, err)
 			return fp
 		}
 
@@ -312,7 +315,7 @@ func (c *Client) tx(ctx context.Context, hash *chainhash.Hash) (*wire.MsgTx, err
 // Schedule a method to be executed.
 // Any currently-scheduled method is replaced.
 func (fp *feePayment) schedule(name string, method func() error) {
-	log.Criticalf("%s: scheduling %s", fp.ticketHash, method)
+	log.Criticalf("%s: scheduling %s", fp.ticketHash, name)
 	var delay time.Duration
 	if method != nil {
 		delay = fp.next()
@@ -589,7 +592,7 @@ func (fp *feePayment) makeFeeTx(tx *wire.MsgTx) error {
 	if err != nil {
 		return err
 	}
-	log.Criticalf("%s: update status to Paid", fp.ticketHash)
+	log.Criticalf("%s: makeFeeTx update status to Paid", fp.ticketHash)
 	err = w.UpdateVspTicketFeeToPaid(ctx, &fp.ticketHash, &feeHash, fp.client.URL, fp.client.PubKey)
 	if err != nil {
 		return err
@@ -738,7 +741,7 @@ func (fp *feePayment) reconcilePayment() error {
 			if err != nil {
 				return err
 			}
-			log.Criticalf("%s: update status to Paid", fp.ticketHash)
+			log.Criticalf("%s: reconcilePayment update status to Paid", fp.ticketHash)
 			err = w.UpdateVspTicketFeeToPaid(ctx, &fp.ticketHash, &feeHash, fp.client.URL, fp.client.PubKey)
 			if err != nil {
 				return err
@@ -746,7 +749,7 @@ func (fp *feePayment) reconcilePayment() error {
 			err = nil
 		case types.ErrInvalidFeeTx, types.ErrCannotBroadcastFee:
 			log.Criticalf("%s: reconcilePayment submit ErrInvalidFeeTx/ErrCannotBroadcastFee", fp.ticketHash)
-			log.Criticalf("%s: update status to Errored", fp.ticketHash)
+			log.Criticalf("%s: reconcilePayment update status to Errored", fp.ticketHash)
 			err := w.UpdateVspTicketFeeToErrored(ctx, &fp.ticketHash, fp.client.URL, fp.client.PubKey)
 			if err != nil {
 				return err
@@ -765,7 +768,7 @@ func (fp *feePayment) reconcilePayment() error {
 		return err
 	}
 
-	log.Criticalf("%s: update status to Paid", fp.ticketHash)
+	log.Criticalf("%s: reconcilePayment update status to Paid", fp.ticketHash)
 	err = w.UpdateVspTicketFeeToPaid(ctx, &fp.ticketHash, &feeHash, fp.client.URL, fp.client.PubKey)
 	if err != nil {
 		return err
@@ -927,7 +930,7 @@ func (fp *feePayment) confirmPayment() (err error) {
 		fp.mu.Lock()
 		feeHash := fp.feeHash
 		fp.mu.Unlock()
-		log.Criticalf("%s: update status to Confirmed", fp.ticketHash)
+		log.Criticalf("%s: confirmPayment update status to Confirmed", fp.ticketHash)
 		err = w.UpdateVspTicketFeeToConfirmed(ctx, &fp.ticketHash, &feeHash, fp.client.URL, fp.client.PubKey)
 		if err != nil {
 			return err

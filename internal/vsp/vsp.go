@@ -201,7 +201,7 @@ func (c *Client) ProcessManagedTickets(ctx context.Context) error {
 				log.Criticalf("%s: No - NewHashFromStr error: %v", hash, err)
 				return err
 			}
-			log.Criticalf("%s: update status to Confirmed", hash)
+			log.Criticalf("%s: processManagedTickets update status to Confirmed", hash)
 			err = c.wallet.UpdateVspTicketFeeToConfirmed(ctx, hash, feeHash, c.Client.URL, c.Client.PubKey)
 			if err != nil {
 				log.Criticalf("%s: No - UpdateVspTicketFeeToConfirmed error: %v", hash, err)
@@ -215,7 +215,7 @@ func (c *Client) ProcessManagedTickets(ctx context.Context) error {
 				log.Criticalf("%s: No - NewHashFromStr error: %v", hash, err)
 				return err
 			}
-			log.Criticalf("%s: update status to Paid", hash)
+			log.Criticalf("%s: processManagedTickets update status to Paid", hash)
 			err = c.wallet.UpdateVspTicketFeeToPaid(ctx, hash, feeHash, c.Client.URL, c.Client.PubKey)
 			if err != nil {
 				log.Criticalf("%s: No - UpdateVspTicketFeeToPaid error: %v", hash, err)
@@ -264,7 +264,7 @@ func (c *Client) Process(ctx context.Context, ticketHash *chainhash.Hash, feeTx 
 		fp := c.feePayment(ctx, ticketHash, false)
 		if fp == nil {
 			log.Criticalf("%s: fp nil", ticketHash)
-			log.Criticalf("%s: update status to Errored", ticketHash)
+			log.Criticalf("%s: Process update status to Errored", ticketHash)
 			err := c.wallet.UpdateVspTicketFeeToErrored(ctx, ticketHash, c.Client.URL, c.Client.PubKey)
 			if err != nil {
 				return err
@@ -279,7 +279,7 @@ func (c *Client) Process(ctx context.Context, ticketHash *chainhash.Hash, feeTx 
 		err := fp.receiveFeeAddress()
 		if err != nil {
 			log.Criticalf("%s: receiveFeeAddress error: %v", ticketHash, err)
-			log.Criticalf("%s: update status to Errored", ticketHash)
+			log.Criticalf("%s: Process update status to Errored", ticketHash)
 			err := c.wallet.UpdateVspTicketFeeToErrored(ctx, ticketHash, c.Client.URL, c.Client.PubKey)
 			if err != nil {
 				return err
@@ -292,7 +292,7 @@ func (c *Client) Process(ctx context.Context, ticketHash *chainhash.Hash, feeTx 
 		err = fp.makeFeeTx(feeTx)
 		if err != nil {
 			log.Criticalf("%s: makeFeeTx error: %v", ticketHash, err)
-			log.Criticalf("%s: update status to Errored", ticketHash)
+			log.Criticalf("%s: Process update status to Errored", ticketHash)
 			err := c.wallet.UpdateVspTicketFeeToErrored(ctx, ticketHash, c.Client.URL, c.Client.PubKey)
 			if err != nil {
 				return err
