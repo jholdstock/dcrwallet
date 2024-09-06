@@ -620,7 +620,7 @@ func (w *Wallet) processTransactionRecord(ctx context.Context, dbtx walletdb.Rea
 func selectOwnedTickets(w *Wallet, dbtx walletdb.ReadTx, tickets []*chainhash.Hash) []*chainhash.Hash {
 	var owned []*chainhash.Hash
 	for _, ticketHash := range tickets {
-		if w.txStore.OwnTicket(dbtx, ticketHash) || w.stakeMgr.OwnTicket(ticketHash) {
+		if w.txStore.OwnTicket(dbtx, ticketHash) {
 			owned = append(owned, ticketHash)
 		}
 	}
@@ -685,9 +685,6 @@ func (w *Wallet) VoteOnOwnedTickets(ctx context.Context, winningTicketHashes []*
 
 		for i, ticketHash := range ticketHashes {
 			ticketPurchase, err := w.txStore.Tx(txmgrNs, ticketHash)
-			if err != nil && errors.Is(err, errors.NotExist) {
-				ticketPurchase, err = w.stakeMgr.TicketPurchase(dbtx, ticketHash)
-			}
 			if err != nil {
 				log.Errorf("Failed to read ticket purchase transaction for "+
 					"owned winning ticket %v: %v", ticketHash, err)

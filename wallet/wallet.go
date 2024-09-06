@@ -104,10 +104,9 @@ type Wallet struct {
 	disapprovePercent atomic.Uint32
 
 	// Data stores
-	db       walletdb.DB
-	manager  *udb.Manager
-	txStore  *udb.Store
-	stakeMgr *udb.StakeStore
+	db      walletdb.DB
+	manager *udb.Manager
+	txStore *udb.Store
 
 	// Handlers for stake system.
 	stakeSettingsLock  sync.Mutex
@@ -423,7 +422,6 @@ func (w *Wallet) AgendaChoices(ctx context.Context, ticketHash *chainhash.Hash) 
 	err = walletdb.View(ctx, w.db, func(tx walletdb.ReadTx) error {
 		if ticketHash != nil {
 			ownTicket = w.txStore.OwnTicket(tx, ticketHash)
-			ownTicket = ownTicket || w.stakeMgr.OwnTicket(ticketHash)
 			if !ownTicket {
 				return nil
 			}
@@ -480,7 +478,7 @@ func (w *Wallet) SetAgendaChoices(ctx context.Context, ticketHash *chainhash.Has
 		// validate ticket ownership
 		var ownTicket bool
 		err = walletdb.View(ctx, w.db, func(dbtx walletdb.ReadTx) error {
-			ownTicket = w.txStore.OwnTicket(dbtx, ticketHash) || w.stakeMgr.OwnTicket(ticketHash)
+			ownTicket = w.txStore.OwnTicket(dbtx, ticketHash)
 			return nil
 		})
 		if err != nil {
@@ -5428,7 +5426,7 @@ func Open(ctx context.Context, cfg *Config) (*Wallet, error) {
 	}
 
 	// Open database managers
-	w.manager, w.txStore, w.stakeMgr, err = udb.Open(ctx, db, params, cfg.PubPassphrase)
+	w.manager, w.txStore, err = udb.Open(ctx, db, params, cfg.PubPassphrase)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
