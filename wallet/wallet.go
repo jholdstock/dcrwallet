@@ -14,8 +14,6 @@ import (
 	"math/big"
 	"runtime"
 	"sort"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -119,8 +117,6 @@ type Wallet struct {
 	poolAddress        stdaddr.StakeAddress
 	poolFees           float64
 	manualTickets      bool
-	stakePoolEnabled   bool
-	stakePoolColdAddrs map[string]struct{}
 	subsidyCache       *blockchain.SubsidyCache
 	tspends            map[chainhash.Hash]wire.MsgTx
 	tspendPolicy       map[chainhash.Hash]stake.TreasuryVoteT
@@ -199,11 +195,10 @@ type Config struct {
 	DisableCoinTypeUpgrades bool
 	DisableMixing           bool
 
-	StakePoolColdExtKey string
-	ManualTickets       bool
-	AllowHighFees       bool
-	RelayFee            dcrutil.Amount
-	Params              *chaincfg.Params
+	ManualTickets bool
+	AllowHighFees bool
+	RelayFee      dcrutil.Amount
+	Params        *chaincfg.Params
 }
 
 // DisapprovePercent returns the wallet's block disapproval percentage.
@@ -5333,67 +5328,6 @@ func CreateWatchOnly(ctx context.Context, db DB, extendedPubKey string, pubPass 
 	return nil
 }
 
-// decodeStakePoolColdExtKey decodes the string of stake pool addresses
-// to search incoming tickets for. The format for the passed string is:
-//
-//	"xpub...:end"
-//
-// where xpub... is the extended public key and end is the last
-// address index to scan to, exclusive. Effectively, it returns the derived
-// addresses for this public key for the address indexes [0,end). The branch
-// used for the derivation is always the external branch.
-func decodeStakePoolColdExtKey(encStr string, params *chaincfg.Params) (map[string]struct{}, error) {
-	// Default option; stake pool is disabled.
-	if encStr == "" {
-		return nil, nil
-	}
-
-	// Split the string.
-	splStrs := strings.Split(encStr, ":")
-	if len(splStrs) != 2 {
-		return nil, errors.Errorf("failed to correctly parse passed stakepool " +
-			"address public key and index")
-	}
-
-	// Parse the extended public key and ensure it's the right network.
-	key, err := hdkeychain.NewKeyFromString(splStrs[0], params)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse the ending index and ensure it's valid.
-	end, err := strconv.Atoi(splStrs[1])
-	if err != nil {
-		return nil, err
-	}
-	if end < 0 || end > udb.MaxAddressesPerAccount {
-		return nil, errors.Errorf("pool address index is invalid (got %v)",
-			end)
-	}
-
-	log.Infof("Please wait, deriving %v stake pool fees addresses "+
-		"for extended public key %s", end, splStrs[0])
-
-	// Derive from external branch
-	branchKey, err := key.Child(udb.ExternalBranch)
-	if err != nil {
-		return nil, err
-	}
-
-	// Derive the addresses from [0, end) for this extended public key.
-	addrs, err := deriveChildAddresses(branchKey, 0, uint32(end)+1, params)
-	if err != nil {
-		return nil, err
-	}
-
-	addrMap := make(map[string]struct{})
-	for i := range addrs {
-		addrMap[addrs[i].String()] = struct{}{}
-	}
-
-	return addrMap, nil
-}
-
 // GapLimit returns the currently used gap limit.
 func (w *Wallet) GapLimit() uint32 {
 	return w.gapLimit
@@ -5585,13 +5519,6 @@ func Open(ctx context.Context, cfg *Config) (*Wallet, error) {
 	w.tspendKeyPolicy = treasuryKeyPolicy
 	w.vspTSpendPolicy = vspTSpendPolicy
 	w.vspTSpendKeyPolicy = vspTreasuryKeyPolicy
-
-	w.stakePoolColdAddrs, err = decodeStakePoolColdExtKey(cfg.StakePoolColdExtKey,
-		params)
-	if err != nil {
-		return nil, errors.E(op, err)
-	}
-	w.stakePoolEnabled = len(w.stakePoolColdAddrs) > 0
 
 	// Amounts
 	w.relayFee = cfg.RelayFee
