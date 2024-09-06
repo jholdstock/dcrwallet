@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 The Decred developers
+// Copyright (c) 2016-2024 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,7 +11,6 @@ import (
 	"decred.org/dcrwallet/v5/wallet/walletdb"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	dcrdtypes "github.com/decred/dcrd/rpc/jsonrpc/types/v4"
-	"github.com/decred/dcrd/txscript/v4/stdaddr"
 	"github.com/jrick/bitset"
 	"golang.org/x/sync/errgroup"
 )
@@ -166,39 +165,5 @@ func (w *Wallet) LiveTicketHashes(ctx context.Context, rpc LiveTicketQuerier, in
 		}
 	}
 
-	return ticketHashes, nil
-}
-
-// TicketHashesForVotingAddress returns the hashes of all tickets with voting
-// rights delegated to votingAddr.  This function does not return the hashes of
-// pruned tickets.
-func (w *Wallet) TicketHashesForVotingAddress(ctx context.Context, votingAddr stdaddr.Address) ([]chainhash.Hash, error) {
-	const op errors.Op = "wallet.TicketHashesForVotingAddress"
-
-	var ticketHashes []chainhash.Hash
-	err := walletdb.View(ctx, w.db, func(tx walletdb.ReadTx) error {
-		stakemgrNs := tx.ReadBucket(wstakemgrNamespaceKey)
-		txmgrNs := tx.ReadBucket(wtxmgrNamespaceKey)
-
-		dump, err := w.stakeMgr.DumpSStxHashesForAddress(
-			stakemgrNs, votingAddr)
-		if err != nil {
-			return err
-		}
-
-		// Exclude hashes for unsaved transactions.
-		ticketHashes = dump[:0]
-		for i := range dump {
-			h := &dump[i]
-			if w.txStore.ExistsTx(txmgrNs, h) {
-				ticketHashes = append(ticketHashes, *h)
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, errors.E(op, err)
-	}
 	return ticketHashes, nil
 }

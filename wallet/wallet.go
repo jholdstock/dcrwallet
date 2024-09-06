@@ -73,9 +73,8 @@ var (
 
 // Namespace bucket keys.
 var (
-	waddrmgrNamespaceKey  = []byte("waddrmgr")
-	wtxmgrNamespaceKey    = []byte("wtxmgr")
-	wstakemgrNamespaceKey = []byte("wstakemgr")
+	waddrmgrNamespaceKey = []byte("waddrmgr")
+	wtxmgrNamespaceKey   = []byte("wtxmgr")
 )
 
 // The assumed output script version is defined to assist with refactoring to

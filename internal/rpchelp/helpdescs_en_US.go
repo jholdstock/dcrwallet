@@ -907,11 +907,6 @@ var helpDescsEnUS = map[string]string{
 	"ticketinforesult-choices":       "Vote preferences set for the ticket",
 	"ticketinforesult-vsphost":       "VSP Host associated with the ticket (if any)",
 
-	// TicketsForAddressCmd help.
-	"ticketsforaddress--synopsis": "Request all the tickets for an address.",
-	"ticketsforaddress-address":   "Address to look for.",
-	"ticketsforaddress--result0":  "Tickets owned by the specified address.",
-
 	// TransactionInput help.
 	"transactioninput-amount": "The previous output amount",
 	"transactioninput-txid":   "The transaction hash of the referenced output",

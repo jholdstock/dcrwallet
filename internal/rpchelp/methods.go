@@ -116,7 +116,6 @@ var Methods = []struct {
 	{"sweepaccount", []any{(*types.SweepAccountResult)(nil)}},
 	{"syncstatus", []any{(*types.SyncStatusResult)(nil)}},
 	{"ticketinfo", []any{(*[]types.TicketInfoResult)(nil)}},
-	{"ticketsforaddress", returnsBool},
 	{"treasurypolicy", []any{(*[]types.TreasuryPolicyResult)(nil), (*types.TreasuryPolicyResult)(nil)}},
 	{"tspendpolicy", []any{(*[]types.TSpendPolicyResult)(nil), (*types.TSpendPolicyResult)(nil)}},
 	{"unlockaccount", nil},

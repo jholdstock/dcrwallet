@@ -5,7 +5,6 @@
 package udb
 
 import (
-	"bytes"
 	"sync"
 	"time"
 
@@ -75,50 +74,6 @@ func (s *StakeStore) DumpSStxHashes() []chainhash.Hash {
 	s.mtx.RLock()
 
 	return s.dumpSStxHashes()
-}
-
-// dumpSStxHashes dumps the hashes of all owned SStxs for some address.
-func (s *StakeStore) dumpSStxHashesForAddress(ns walletdb.ReadBucket, addr stdaddr.Address) ([]chainhash.Hash, error) {
-	// Extract the HASH160 script hash; if it's not 20 bytes
-	// long, return an error.
-	var hash160 []byte
-	switch addr := addr.(type) {
-	case stdaddr.Hash160er:
-		hash160 = addr.Hash160()[:]
-	default:
-		err := errors.Errorf("cannot get hash160 from address %v", addr)
-		return nil, errors.E(errors.Invalid, err)
-	}
-	_, addrIsP2SH := addr.(*stdaddr.AddressScriptHashV0)
-
-	allTickets := s.dumpSStxHashes()
-	var ticketsForAddr []chainhash.Hash
-
-	// Access the database and store the result locally.
-	for _, h := range allTickets {
-		thisHash160, p2sh, err := fetchSStxRecordSStxTicketHash160(ns, &h)
-		if err != nil {
-			return nil, errors.E(errors.IO, err)
-		}
-		if addrIsP2SH != p2sh {
-			continue
-		}
-
-		if bytes.Equal(hash160, thisHash160) {
-			ticketsForAddr = append(ticketsForAddr, h)
-		}
-	}
-
-	return ticketsForAddr, nil
-}
-
-// DumpSStxHashesForAddress returns the hashes of all wallet ticket purchase
-// transactions for an address.
-func (s *StakeStore) DumpSStxHashesForAddress(ns walletdb.ReadBucket, addr stdaddr.Address) ([]chainhash.Hash, error) {
-	defer s.mtx.RUnlock()
-	s.mtx.RLock()
-
-	return s.dumpSStxHashesForAddress(ns, addr)
 }
 
 // sstxAddress returns the address for a given ticket.

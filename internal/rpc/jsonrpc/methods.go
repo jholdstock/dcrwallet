@@ -174,7 +174,6 @@ var handlers = map[string]handler{
 	"sweepaccount":              {fn: (*Server).sweepAccount},
 	"syncstatus":                {fn: (*Server).syncStatus},
 	"ticketinfo":                {fn: (*Server).ticketInfo},
-	"ticketsforaddress":         {fn: (*Server).ticketsForAddress},
 	"treasurypolicy":            {fn: (*Server).treasuryPolicy},
 	"tspendpolicy":              {fn: (*Server).tspendPolicy},
 	"unlockaccount":             {fn: (*Server).unlockAccount},
@@ -4417,34 +4416,6 @@ func (s *Server) ticketInfo(ctx context.Context, icmd any) (any, error) {
 	}, start, end)
 
 	return res, err
-}
-
-// ticketsForAddress retrieves all ticket hashes that have the passed voting
-// address. It will only return tickets that are in the mempool or blockchain,
-// and should not return pruned tickets.
-func (s *Server) ticketsForAddress(ctx context.Context, icmd any) (any, error) {
-	cmd := icmd.(*types.TicketsForAddressCmd)
-	w, ok := s.walletLoader.LoadedWallet()
-	if !ok {
-		return nil, errUnloadedWallet
-	}
-
-	addr, err := stdaddr.DecodeAddress(cmd.Address, w.ChainParams())
-	if err != nil {
-		return nil, err
-	}
-
-	ticketHashes, err := w.TicketHashesForVotingAddress(ctx, addr)
-	if err != nil {
-		return nil, err
-	}
-
-	ticketHashStrs := make([]string, 0, len(ticketHashes))
-	for _, hash := range ticketHashes {
-		ticketHashStrs = append(ticketHashStrs, hash.String())
-	}
-
-	return dcrdtypes.TicketsForAddressResult{Tickets: ticketHashStrs}, nil
 }
 
 func isNilOrEmpty(s *string) bool {

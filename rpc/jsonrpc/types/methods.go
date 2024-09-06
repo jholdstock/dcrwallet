@@ -1326,7 +1326,6 @@ func init() {
 		{"gettxout", (*GetTxOutCmd)(nil)},
 		{"help", (*HelpCmd)(nil)},
 		{"sendrawtransaction", (*SendRawTransactionCmd)(nil)},
-		{"ticketsforaddress", (*TicketsForAddressCmd)(nil)},
 		{"validateaddress", (*ValidateAddressCmd)(nil)},
 		{"verifymessage", (*VerifyMessageCmd)(nil)},
 		{"version", (*VersionCmd)(nil)},
@@ -1362,7 +1361,6 @@ type (
 	GetTxOutCmd             dcrdtypes.GetTxOutCmd
 	HelpCmd                 dcrdtypes.HelpCmd
 	SendRawTransactionCmd   dcrdtypes.SendRawTransactionCmd
-	TicketsForAddressCmd    dcrdtypes.TicketsForAddressCmd
 	ValidateAddressCmd      dcrdtypes.ValidateAddressCmd
 	VerifyMessageCmd        dcrdtypes.VerifyMessageCmd
 	VersionCmd              dcrdtypes.VersionCmd
