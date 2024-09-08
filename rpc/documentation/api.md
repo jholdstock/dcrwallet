@@ -2802,7 +2802,7 @@ launch the V2 ticket buyer.
 #### `RunTicketBuyer`
 
 The `RunTicketBuyer` starts a new V2 ticket buyer for the specified account.
-The users may specify a balance to maintain as well as various settings for purchasing tickets for stakepools.
+The users may specify a balance to maintain as well as various settings for purchasing tickets for VSPs.
 
 **Request:** `RunTicketBuyerRequest`
 
@@ -2815,10 +2815,6 @@ The users may specify a balance to maintain as well as various settings for purc
 - `int64 balance_to_maintain`: When set, the account will purchase as many tickets as possible without going under this amount.
 
 - `string voting_address`: The address to give the tickets purchased voting rights.
-
-- `string pool_address`: The address that will be used in any stakepool fee commitment utxos.
-
-- `double pool_fees`: The percentage used to calculate the proper fee in the stakepool fee commitment utxos.
 
 **Response:** `stream RunTicketBuyerResponse`
 

@@ -2673,18 +2673,6 @@ func (t *ticketbuyerV2Server) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr 
 			return err
 		}
 	}
-	var poolAddress stdaddr.StakeAddress
-	if req.PoolAddress != "" {
-		if req.VspHost != "" || req.VspPubkey != "" {
-			return status.Errorf(codes.InvalidArgument,
-				"request contains both legacy stakepoold and vspd options.")
-		}
-		poolAddress, err = decodeStakeAddress(req.PoolAddress, params)
-		if err != nil {
-			return err
-		}
-	}
-
 	// new vspd request
 	var vspHost string
 	var vspPubKey string
@@ -2765,8 +2753,6 @@ func (t *ticketbuyerV2Server) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr 
 		c.VotingAccount = req.VotingAccount
 		c.Maintain = dcrutil.Amount(req.BalanceToMaintain)
 		c.VotingAddr = votingAddress
-		c.PoolFeeAddr = poolAddress
-		c.PoolFees = req.PoolFees
 		c.VSP = vspClient
 		c.Mixing = csppServer != ""
 		c.MixedAccount = mixedAccount
