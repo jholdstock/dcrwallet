@@ -8,6 +8,14 @@ import (
 // VSP loads or creates a package-global instance of the VSP client for a host.
 // This allows clients to be created and reused across various subsystems.
 func (w *Wallet) VSP(cfg VSPClientConfig) (*VSPClient, error) {
+	if cfg.URL == "" {
+		return nil, errors.New("vsp url can not be null")
+	}
+
+	if cfg.PubKey == "" {
+		return nil, errors.New("vsp pubkey can not be null")
+	}
+
 	key := cfg.URL
 	w.vspClientsMu.Lock()
 	defer w.vspClientsMu.Unlock()
