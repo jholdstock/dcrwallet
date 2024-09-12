@@ -4100,15 +4100,14 @@ func (s *walletServer) SyncVSPFailedTickets(ctx context.Context, req *pb.SyncVSP
 	if vspHost == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "vsp host can not be null")
 	}
-	policy := &wallet.VSPPolicy{
-		MaxFee:     0.1e8,
-		FeeAcct:    req.Account,
-		ChangeAcct: req.ChangeAccount,
-	}
 	cfg := wallet.VSPClientConfig{
 		URL:    vspHost,
 		PubKey: vspPubKey,
-		Policy: policy,
+		Policy: &wallet.VSPPolicy{
+			MaxFee:     0.1e8,
+			FeeAcct:    req.Account,
+			ChangeAcct: req.ChangeAccount,
+		},
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
@@ -4146,15 +4145,14 @@ func (s *walletServer) ProcessManagedTickets(ctx context.Context, req *pb.Proces
 	if vspHost == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "vsp host can not be null")
 	}
-	policy := &wallet.VSPPolicy{
-		MaxFee:     0.1e8,
-		FeeAcct:    req.FeeAccount,
-		ChangeAcct: req.ChangeAccount,
-	}
 	cfg := wallet.VSPClientConfig{
 		URL:    vspHost,
 		PubKey: vspPubKey,
-		Policy: policy,
+		Policy: &wallet.VSPPolicy{
+			MaxFee:     0.1e8,
+			FeeAcct:    req.FeeAccount,
+			ChangeAcct: req.ChangeAccount,
+		},
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
@@ -4185,15 +4183,14 @@ func (s *walletServer) ProcessUnmanagedTickets(ctx context.Context, req *pb.Proc
 	if vspHost == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "vsp host can not be null")
 	}
-	policy := &wallet.VSPPolicy{
-		MaxFee:     0.1e8,
-		FeeAcct:    req.FeeAccount,
-		ChangeAcct: req.ChangeAccount,
-	}
 	cfg := wallet.VSPClientConfig{
 		URL:    vspHost,
 		PubKey: vspPubKey,
-		Policy: policy,
+		Policy: &wallet.VSPPolicy{
+			MaxFee:     0.1e8,
+			FeeAcct:    req.FeeAccount,
+			ChangeAcct: req.ChangeAccount,
+		},
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
@@ -4221,15 +4218,14 @@ func (s *walletServer) SetVspdVoteChoices(ctx context.Context, req *pb.SetVspdVo
 	if vspHost == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "vsp host can not be null")
 	}
-	policy := &wallet.VSPPolicy{
-		MaxFee:     0.1e8,
-		FeeAcct:    req.FeeAccount,
-		ChangeAcct: req.ChangeAccount,
-	}
 	cfg := wallet.VSPClientConfig{
 		URL:    vspHost,
 		PubKey: vspPubKey,
-		Policy: policy,
+		Policy: &wallet.VSPPolicy{
+			MaxFee:     0.1e8,
+			FeeAcct:    req.FeeAccount,
+			ChangeAcct: req.ChangeAccount,
+		},
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
