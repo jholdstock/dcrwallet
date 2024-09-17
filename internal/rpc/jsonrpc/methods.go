@@ -22,7 +22,6 @@ import (
 
 	"decred.org/dcrwallet/v5/chain"
 	"decred.org/dcrwallet/v5/errors"
-	"decred.org/dcrwallet/v5/internal/loader"
 	"decred.org/dcrwallet/v5/p2p"
 	"decred.org/dcrwallet/v5/rpc/client/dcrd"
 	"decred.org/dcrwallet/v5/rpc/jsonrpc/types"
@@ -3357,7 +3356,7 @@ func (s *Server) purchaseTicket(ctx context.Context, icmd any) (any, error) {
 			},
 			Params: w.ChainParams(),
 		}
-		vspClient, err = loader.VSP(cfg)
+		vspClient, err = wallet.VSP(cfg)
 		if err != nil {
 			return nil, rpcErrorf(dcrjson.ErrRPCMisc,
 				"VSP Server instance failed to start: %v", err)
@@ -3446,7 +3445,7 @@ func (s *Server) processUnmanagedTicket(ctx context.Context, icmd any) (any, err
 	if vspHost == "" {
 		return nil, rpcErrorf(dcrjson.ErrRPCInvalidParameter, "vsphost must be set in options")
 	}
-	vspClient, err := loader.LookupVSP(vspHost)
+	vspClient, err := wallet.LookupVSP(vspHost)
 	if err != nil {
 		return nil, err
 	}
@@ -4702,7 +4701,7 @@ func (s *Server) updateVSPVoteChoices(ctx context.Context, w *wallet.Wallet, tic
 			}
 			return err
 		}
-		vspClient, err := loader.LookupVSP(vspHost)
+		vspClient, err := wallet.LookupVSP(vspHost)
 		if err != nil {
 			return err
 		}
@@ -4725,7 +4724,7 @@ func (s *Server) updateVSPVoteChoices(ctx context.Context, w *wallet.Wallet, tic
 			}
 			return err
 		}
-		vspClient, err := loader.LookupVSP(vspHost)
+		vspClient, err := wallet.LookupVSP(vspHost)
 		if err != nil {
 			return err
 		}

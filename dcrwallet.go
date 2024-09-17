@@ -282,7 +282,7 @@ func run(ctx context.Context) error {
 				},
 				Params: w.ChainParams(),
 			}
-			vspClient, err = ldr.VSP(vspCfg)
+			vspClient, err = wallet.VSP(vspCfg)
 			if err != nil {
 				log.Errorf("vsp: %v", err)
 				return err

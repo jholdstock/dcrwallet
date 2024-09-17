@@ -1826,7 +1826,7 @@ func (s *walletServer) PurchaseTickets(ctx context.Context,
 			},
 			Params: s.wallet.ChainParams(),
 		}
-		vspClient, err = loader.VSP(cfg)
+		vspClient, err = wallet.VSP(cfg)
 		if err != nil {
 			return nil, status.Errorf(codes.Unknown, "VSP Server instance failed to start: %v", err)
 		}
@@ -2640,7 +2640,7 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 			},
 			Params: w.ChainParams(),
 		}
-		vspClient, err = loader.VSP(cfg)
+		vspClient, err = wallet.VSP(cfg)
 		if err != nil {
 			return status.Errorf(codes.Unknown, "TicketBuyer instance failed to start. Error: %v", err)
 		}
@@ -4124,7 +4124,7 @@ func (s *walletServer) SyncVSPFailedTickets(ctx context.Context, req *pb.SyncVSP
 		Policy: policy,
 		Params: s.wallet.ChainParams(),
 	}
-	vspClient, err := loader.VSP(cfg)
+	vspClient, err := wallet.VSP(cfg)
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "TicketBuyer instance failed to start. Error: %v", err)
 	}
@@ -4173,7 +4173,7 @@ func (s *walletServer) ProcessManagedTickets(ctx context.Context, req *pb.Proces
 		Policy: policy,
 		Params: s.wallet.ChainParams(),
 	}
-	vspClient, err := loader.VSP(cfg)
+	vspClient, err := wallet.VSP(cfg)
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "VSPClient instance failed to start. Error: %v", err)
 	}
@@ -4215,7 +4215,7 @@ func (s *walletServer) ProcessUnmanagedTickets(ctx context.Context, req *pb.Proc
 		Policy: policy,
 		Params: s.wallet.ChainParams(),
 	}
-	vspClient, err := loader.VSP(cfg)
+	vspClient, err := wallet.VSP(cfg)
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "VSPClient instance failed to start. Error: %v", err)
 	}
@@ -4254,7 +4254,7 @@ func (s *walletServer) SetVspdVoteChoices(ctx context.Context, req *pb.SetVspdVo
 		Policy: policy,
 		Params: s.wallet.ChainParams(),
 	}
-	vspClient, err := loader.VSP(cfg)
+	vspClient, err := wallet.VSP(cfg)
 	if err != nil {
 		return nil, status.Errorf(codes.Unknown, "VSPClient instance failed to start. Error: %v", err)
 	}
@@ -4335,7 +4335,7 @@ func marshalVSPTrackedTickets(tickets []*wallet.VSPTicketInfo) []*pb.GetTrackedV
 }
 
 func (s *walletServer) GetTrackedVSPTickets(ctx context.Context, req *pb.GetTrackedVSPTicketsRequest) (*pb.GetTrackedVSPTicketsResponse, error) {
-	vspClients := loader.AllVSPs()
+	vspClients := wallet.AllVSPs()
 	res := &pb.GetTrackedVSPTicketsResponse{
 		Vsps: make([]*pb.GetTrackedVSPTicketsResponse_VSP, 0, len(vspClients)),
 	}
