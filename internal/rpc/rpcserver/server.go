@@ -1818,13 +1818,11 @@ func (s *walletServer) PurchaseTickets(ctx context.Context,
 			URL:    vspHost,
 			PubKey: vspPubKey,
 			Dialer: nil,
-			Wallet: s.wallet,
 			Policy: &wallet.VSPPolicy{
 				MaxFee:     0.1e8,
 				FeeAcct:    req.Account,
 				ChangeAcct: req.ChangeAccount,
 			},
-			Params: s.wallet.ChainParams(),
 		}
 		vspClient, err = s.wallet.VSP(cfg)
 		if err != nil {
@@ -2632,13 +2630,11 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 			URL:    vspHost,
 			PubKey: vspPubKey,
 			Dialer: nil,
-			Wallet: w,
 			Policy: &wallet.VSPPolicy{
 				MaxFee:     0.1e8,
 				FeeAcct:    req.Account,
 				ChangeAcct: req.Account,
 			},
-			Params: w.ChainParams(),
 		}
 		vspClient, err = w.VSP(cfg)
 		if err != nil {
@@ -4120,9 +4116,7 @@ func (s *walletServer) SyncVSPFailedTickets(ctx context.Context, req *pb.SyncVSP
 		URL:    vspHost,
 		PubKey: vspPubKey,
 		Dialer: nil,
-		Wallet: s.wallet,
 		Policy: policy,
-		Params: s.wallet.ChainParams(),
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
@@ -4169,9 +4163,7 @@ func (s *walletServer) ProcessManagedTickets(ctx context.Context, req *pb.Proces
 		URL:    vspHost,
 		PubKey: vspPubKey,
 		Dialer: nil,
-		Wallet: s.wallet,
 		Policy: policy,
-		Params: s.wallet.ChainParams(),
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
@@ -4211,9 +4203,7 @@ func (s *walletServer) ProcessUnmanagedTickets(ctx context.Context, req *pb.Proc
 		URL:    vspHost,
 		PubKey: vspPubKey,
 		Dialer: nil,
-		Wallet: s.wallet,
 		Policy: policy,
-		Params: s.wallet.ChainParams(),
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
@@ -4250,9 +4240,7 @@ func (s *walletServer) SetVspdVoteChoices(ctx context.Context, req *pb.SetVspdVo
 		URL:    vspHost,
 		PubKey: vspPubKey,
 		Dialer: nil,
-		Wallet: s.wallet,
 		Policy: policy,
-		Params: s.wallet.ChainParams(),
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {

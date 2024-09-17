@@ -3348,13 +3348,11 @@ func (s *Server) purchaseTicket(ctx context.Context, icmd any) (any, error) {
 			URL:    s.cfg.VSPHost,
 			PubKey: s.cfg.VSPPubKey,
 			Dialer: s.cfg.Dial,
-			Wallet: w,
 			Policy: &wallet.VSPPolicy{
 				MaxFee:     s.cfg.VSPMaxFee,
 				FeeAcct:    account,
 				ChangeAcct: changeAccount,
 			},
-			Params: w.ChainParams(),
 		}
 		vspClient, err = w.VSP(cfg)
 		if err != nil {

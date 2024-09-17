@@ -128,7 +128,7 @@ func (c *VSPClient) feePayment(ctx context.Context, ticket *VSPTicket, paidConfi
 		ctx:    context.Background(),
 		ticket: ticket,
 		policy: c.policy,
-		params: c.params,
+		params: c.wallet.chainParams,
 	}
 
 	// No VSP interaction is required for spent tickets.

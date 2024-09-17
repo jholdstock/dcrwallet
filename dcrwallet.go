@@ -274,13 +274,11 @@ func run(ctx context.Context) error {
 				URL:    cfg.VSPOpts.URL,
 				PubKey: cfg.VSPOpts.PubKey,
 				Dialer: cfg.dial,
-				Wallet: w,
 				Policy: &wallet.VSPPolicy{
 					MaxFee:     cfg.VSPOpts.MaxFee.Amount,
 					FeeAcct:    purchaseAcct,
 					ChangeAcct: changeAcct,
 				},
-				Params: w.ChainParams(),
 			}
 			vspClient, err = w.VSP(vspCfg)
 			if err != nil {

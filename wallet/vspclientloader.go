@@ -15,7 +15,7 @@ func (w *Wallet) VSP(cfg VSPClientConfig) (*VSPClient, error) {
 	if ok {
 		return client, nil
 	}
-	client, err := NewVSPClient(cfg, loggers.VspcLog)
+	client, err := w.NewVSPClient(cfg, loggers.VspcLog)
 	if err != nil {
 		return nil, err
 	}

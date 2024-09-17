@@ -16,7 +16,6 @@ import (
 	"decred.org/dcrwallet/v5/errors"
 	"decred.org/dcrwallet/v5/wallet/udb"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/chaincfg/v3"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrd/txscript/v4/stdaddr"
 	"github.com/decred/dcrd/wire"
@@ -40,8 +39,7 @@ type VSPClient struct {
 	mu   sync.Mutex
 	jobs map[chainhash.Hash]*vspFeePayment
 
-	log    slog.Logger
-	params *chaincfg.Params
+	log slog.Logger
 }
 
 type VSPClientConfig struct {
@@ -54,17 +52,12 @@ type VSPClientConfig struct {
 	// Dialer specifies an optional dialer when connecting to the VSP.
 	Dialer DialFunc
 
-	// Wallet specifies a loaded wallet.
-	Wallet *Wallet
-
 	// Default policy for fee payments unless another is provided by the
 	// caller.
 	Policy *VSPPolicy
-
-	Params *chaincfg.Params
 }
 
-func NewVSPClient(cfg VSPClientConfig, log slog.Logger) (*VSPClient, error) {
+func (w *Wallet) NewVSPClient(cfg VSPClientConfig, log slog.Logger) (*VSPClient, error) {
 	u, err := url.Parse(cfg.URL)
 	if err != nil {
 		return nil, err
@@ -73,18 +66,11 @@ func NewVSPClient(cfg VSPClientConfig, log slog.Logger) (*VSPClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cfg.Wallet == nil {
-		return nil, fmt.Errorf("wallet option not set")
-	}
-
-	if cfg.Params == nil {
-		return nil, fmt.Errorf("params option not set")
-	}
 
 	client := &vspd.Client{
 		URL:    u.String(),
 		PubKey: pubKey,
-		Sign:   cfg.Wallet.SignMessage,
+		Sign:   w.SignMessage,
 		Log:    log,
 	}
 	client.Transport = &http.Transport{
@@ -92,12 +78,11 @@ func NewVSPClient(cfg VSPClientConfig, log slog.Logger) (*VSPClient, error) {
 	}
 
 	v := &VSPClient{
-		wallet: cfg.Wallet,
+		wallet: w,
 		policy: cfg.Policy,
 		Client: client,
 		jobs:   make(map[chainhash.Hash]*vspFeePayment),
 		log:    log,
-		params: cfg.Params,
 	}
 	return v, nil
 }
