@@ -1816,7 +1816,7 @@ func (s *walletServer) PurchaseTickets(ctx context.Context,
 		}
 		vspClient, err = s.wallet.VSP(cfg)
 		if err != nil {
-			return nil, status.Errorf(codes.Unknown, "VSP Server instance failed to start: %v", err)
+			return nil, status.Errorf(codes.Unknown, "VSP client failed to start. Error: %v", err)
 		}
 	}
 
@@ -2615,7 +2615,7 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 		}
 		vspClient, err = w.VSP(cfg)
 		if err != nil {
-			return status.Errorf(codes.Unknown, "TicketBuyer instance failed to start. Error: %v", err)
+			return status.Errorf(codes.Unknown, "VSP client failed to start. Error: %v", err)
 		}
 	}
 	if req.BalanceToMaintain < 0 {
@@ -4088,7 +4088,7 @@ func (s *walletServer) SyncVSPFailedTickets(ctx context.Context, req *pb.SyncVSP
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
-		return nil, status.Errorf(codes.Unknown, "TicketBuyer instance failed to start. Error: %v", err)
+		return nil, status.Errorf(codes.Unknown, "VSP client failed to start. Error: %v", err)
 	}
 
 	// Process tickets fee if needed.
@@ -4126,7 +4126,7 @@ func (s *walletServer) ProcessManagedTickets(ctx context.Context, req *pb.Proces
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
-		return nil, status.Errorf(codes.Unknown, "VSPClient instance failed to start. Error: %v", err)
+		return nil, status.Errorf(codes.Unknown, "VSP client failed to start. Error: %v", err)
 	}
 
 	tickets, err := s.wallet.ProcessedTickets(ctx)
@@ -4157,7 +4157,7 @@ func (s *walletServer) ProcessUnmanagedTickets(ctx context.Context, req *pb.Proc
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
-		return nil, status.Errorf(codes.Unknown, "VSPClient instance failed to start. Error: %v", err)
+		return nil, status.Errorf(codes.Unknown, "VSP client failed to start. Error: %v", err)
 	}
 
 	unmanagedTickets, err := s.wallet.UnprocessedTickets(ctx)
@@ -4185,7 +4185,7 @@ func (s *walletServer) SetVspdVoteChoices(ctx context.Context, req *pb.SetVspdVo
 	}
 	vspClient, err := s.wallet.VSP(cfg)
 	if err != nil {
-		return nil, status.Errorf(codes.Unknown, "VSPClient instance failed to start. Error: %v", err)
+		return nil, status.Errorf(codes.Unknown, "VSP client failed to start. Error: %v", err)
 	}
 
 	treasuryChoices := make(map[string]string)
