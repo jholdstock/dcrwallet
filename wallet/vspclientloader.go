@@ -1,26 +1,17 @@
 package wallet
 
 import (
-	"sync"
-
 	"decred.org/dcrwallet/v5/errors"
 	"decred.org/dcrwallet/v5/internal/loggers"
 )
 
-var vspClients = struct {
-	mu      sync.Mutex
-	clients map[string]*VSPClient
-}{
-	clients: make(map[string]*VSPClient),
-}
-
 // VSP loads or creates a package-global instance of the VSP client for a host.
 // This allows clients to be created and reused across various subsystems.
-func VSP(cfg VSPClientConfig) (*VSPClient, error) {
+func (w *Wallet) VSP(cfg VSPClientConfig) (*VSPClient, error) {
 	key := cfg.URL
-	vspClients.mu.Lock()
-	defer vspClients.mu.Unlock()
-	client, ok := vspClients.clients[key]
+	w.vspClientsMu.Lock()
+	defer w.vspClientsMu.Unlock()
+	client, ok := w.vspClients[key]
 	if ok {
 		return client, nil
 	}
@@ -28,17 +19,17 @@ func VSP(cfg VSPClientConfig) (*VSPClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	vspClients.clients[key] = client
+	w.vspClients[key] = client
 	return client, nil
 }
 
 // LookupVSP returns a previously-configured VSP client, if one has been created
 // and registered with the VSP function.  Otherwise, a NotExist error is
 // returned.
-func LookupVSP(host string) (*VSPClient, error) {
-	vspClients.mu.Lock()
-	defer vspClients.mu.Unlock()
-	client, ok := vspClients.clients[host]
+func (w *Wallet) LookupVSP(host string) (*VSPClient, error) {
+	w.vspClientsMu.Lock()
+	defer w.vspClientsMu.Unlock()
+	client, ok := w.vspClients[host]
 	if !ok {
 		err := errors.Errorf("VSP client for %q not found", host)
 		return nil, errors.E(errors.NotExist, err)
@@ -47,12 +38,12 @@ func LookupVSP(host string) (*VSPClient, error) {
 }
 
 // AllVSPs returns the list of all currently registered VSPs.
-func AllVSPs() map[string]*VSPClient {
+func (w *Wallet) AllVSPs() map[string]*VSPClient {
 	// Create a copy to avoid callers mutating the list.
-	vspClients.mu.Lock()
-	defer vspClients.mu.Unlock()
-	res := make(map[string]*VSPClient, len(vspClients.clients))
-	for host, client := range vspClients.clients {
+	w.vspClientsMu.Lock()
+	defer w.vspClientsMu.Unlock()
+	res := make(map[string]*VSPClient, len(w.vspClients))
+	for host, client := range w.vspClients {
 		res[host] = client
 	}
 	return res

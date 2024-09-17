@@ -170,6 +170,9 @@ type Wallet struct {
 	deploymentsByID    map[string]*chaincfg.ConsensusDeployment
 	minTestNetTarget   *big.Int
 	minTestNetDiffBits uint32
+
+	vspClientsMu sync.Mutex
+	vspClients   map[string]*VSPClient
 }
 
 // Config represents the configuration options needed to initialize a wallet.
@@ -5409,6 +5412,8 @@ func Open(ctx context.Context, cfg *Config) (*Wallet, error) {
 
 		mixSems: newMixSemaphores(cfg.MixSplitLimit),
 		mixing:  !cfg.DisableMixing,
+
+		vspClients: make(map[string]*VSPClient),
 	}
 
 	// Open database managers

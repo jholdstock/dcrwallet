@@ -3356,7 +3356,7 @@ func (s *Server) purchaseTicket(ctx context.Context, icmd any) (any, error) {
 			},
 			Params: w.ChainParams(),
 		}
-		vspClient, err = wallet.VSP(cfg)
+		vspClient, err = w.VSP(cfg)
 		if err != nil {
 			return nil, rpcErrorf(dcrjson.ErrRPCMisc,
 				"VSP Server instance failed to start: %v", err)
@@ -3445,14 +3445,15 @@ func (s *Server) processUnmanagedTicket(ctx context.Context, icmd any) (any, err
 	if vspHost == "" {
 		return nil, rpcErrorf(dcrjson.ErrRPCInvalidParameter, "vsphost must be set in options")
 	}
-	vspClient, err := wallet.LookupVSP(vspHost)
-	if err != nil {
-		return nil, err
-	}
 
 	w, ok := s.walletLoader.LoadedWallet()
 	if !ok {
 		return nil, errUnloadedWallet
+	}
+
+	vspClient, err := w.LookupVSP(vspHost)
+	if err != nil {
+		return nil, err
 	}
 
 	ticket, err := w.NewVSPTicket(ctx, hash)
@@ -4701,7 +4702,7 @@ func (s *Server) updateVSPVoteChoices(ctx context.Context, w *wallet.Wallet, tic
 			}
 			return err
 		}
-		vspClient, err := wallet.LookupVSP(vspHost)
+		vspClient, err := w.LookupVSP(vspHost)
 		if err != nil {
 			return err
 		}
@@ -4724,7 +4725,7 @@ func (s *Server) updateVSPVoteChoices(ctx context.Context, w *wallet.Wallet, tic
 			}
 			return err
 		}
-		vspClient, err := wallet.LookupVSP(vspHost)
+		vspClient, err := w.LookupVSP(vspHost)
 		if err != nil {
 			return err
 		}
