@@ -28,7 +28,6 @@ import (
 	"decred.org/dcrwallet/v5/rpc/jsonrpc/types"
 	"decred.org/dcrwallet/v5/spv"
 	"decred.org/dcrwallet/v5/version"
-	"decred.org/dcrwallet/v5/vsp"
 	"decred.org/dcrwallet/v5/wallet"
 	"decred.org/dcrwallet/v5/wallet/txauthor"
 	"decred.org/dcrwallet/v5/wallet/txrules"
@@ -3344,14 +3343,14 @@ func (s *Server) purchaseTicket(ctx context.Context, icmd any) (any, error) {
 		}
 	}
 
-	var vspClient *vsp.Client
+	var vspClient *wallet.VSPClient
 	if s.cfg.VSPHost != "" {
-		cfg := vsp.Config{
+		cfg := wallet.VSPClientConfig{
 			URL:    s.cfg.VSPHost,
 			PubKey: s.cfg.VSPPubKey,
 			Dialer: s.cfg.Dial,
 			Wallet: w,
-			Policy: &vsp.Policy{
+			Policy: &wallet.VSPPolicy{
 				MaxFee:     s.cfg.VSPMaxFee,
 				FeeAcct:    account,
 				ChangeAcct: changeAccount,

@@ -5,19 +5,19 @@ import (
 
 	"decred.org/dcrwallet/v5/errors"
 	"decred.org/dcrwallet/v5/internal/loggers"
-	"decred.org/dcrwallet/v5/vsp"
+	"decred.org/dcrwallet/v5/wallet"
 )
 
 var vspClients = struct {
 	mu      sync.Mutex
-	clients map[string]*vsp.Client
+	clients map[string]*wallet.VSPClient
 }{
-	clients: make(map[string]*vsp.Client),
+	clients: make(map[string]*wallet.VSPClient),
 }
 
 // VSP loads or creates a package-global instance of the VSP client for a host.
 // This allows clients to be created and reused across various subsystems.
-func VSP(cfg vsp.Config) (*vsp.Client, error) {
+func VSP(cfg wallet.VSPClientConfig) (*wallet.VSPClient, error) {
 	key := cfg.URL
 	vspClients.mu.Lock()
 	defer vspClients.mu.Unlock()
@@ -25,7 +25,7 @@ func VSP(cfg vsp.Config) (*vsp.Client, error) {
 	if ok {
 		return client, nil
 	}
-	client, err := vsp.New(cfg, loggers.VspcLog)
+	client, err := wallet.NewVSPClient(cfg, loggers.VspcLog)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func VSP(cfg vsp.Config) (*vsp.Client, error) {
 // LookupVSP returns a previously-configured VSP client, if one has been created
 // and registered with the VSP function.  Otherwise, a NotExist error is
 // returned.
-func LookupVSP(host string) (*vsp.Client, error) {
+func LookupVSP(host string) (*wallet.VSPClient, error) {
 	vspClients.mu.Lock()
 	defer vspClients.mu.Unlock()
 	client, ok := vspClients.clients[host]
@@ -48,11 +48,11 @@ func LookupVSP(host string) (*vsp.Client, error) {
 }
 
 // AllVSPs returns the list of all currently registered VSPs.
-func AllVSPs() map[string]*vsp.Client {
+func AllVSPs() map[string]*wallet.VSPClient {
 	// Create a copy to avoid callers mutating the list.
 	vspClients.mu.Lock()
 	defer vspClients.mu.Unlock()
-	res := make(map[string]*vsp.Client, len(vspClients.clients))
+	res := make(map[string]*wallet.VSPClient, len(vspClients.clients))
 	for host, client := range vspClients.clients {
 		res[host] = client
 	}

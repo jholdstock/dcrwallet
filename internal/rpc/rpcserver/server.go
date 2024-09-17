@@ -39,7 +39,6 @@ import (
 	pb "decred.org/dcrwallet/v5/rpc/walletrpc"
 	"decred.org/dcrwallet/v5/spv"
 	"decred.org/dcrwallet/v5/ticketbuyer"
-	"decred.org/dcrwallet/v5/vsp"
 	"decred.org/dcrwallet/v5/wallet"
 	"decred.org/dcrwallet/v5/wallet/txauthor"
 	"decred.org/dcrwallet/v5/wallet/txrules"
@@ -1805,7 +1804,7 @@ func (s *walletServer) PurchaseTickets(ctx context.Context,
 	// new vspd request
 	var vspHost string
 	var vspPubKey string
-	var vspClient *vsp.Client
+	var vspClient *wallet.VSPClient
 	if req.VspHost != "" || req.VspPubkey != "" {
 		vspHost = req.VspHost
 		vspPubKey = req.VspPubkey
@@ -1815,12 +1814,12 @@ func (s *walletServer) PurchaseTickets(ctx context.Context,
 		if vspHost == "" {
 			return nil, status.Errorf(codes.InvalidArgument, "vsp host can not be null")
 		}
-		cfg := vsp.Config{
+		cfg := wallet.VSPClientConfig{
 			URL:    vspHost,
 			PubKey: vspPubKey,
 			Dialer: nil,
 			Wallet: s.wallet,
-			Policy: &vsp.Policy{
+			Policy: &wallet.VSPPolicy{
 				MaxFee:     0.1e8,
 				FeeAcct:    req.Account,
 				ChangeAcct: req.ChangeAccount,
@@ -2608,7 +2607,7 @@ func StartTicketBuyerService(server *grpc.Server, loader *loader.Loader) {
 
 // RunTicketBuyer starts the automatic ticket buyer.
 func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb.TicketBuyerService_RunTicketBuyerServer) error {
-	wallet, ok := t.loader.LoadedWallet()
+	w, ok := t.loader.LoadedWallet()
 	if !ok {
 		return status.Errorf(codes.FailedPrecondition, "Wallet has not been loaded")
 	}
@@ -2619,7 +2618,7 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 	var err error
 	var vspHost string
 	var vspPubKey string
-	var vspClient *vsp.Client
+	var vspClient *wallet.VSPClient
 	if req.VspHost != "" || req.VspPubkey != "" {
 		vspHost = req.VspHost
 		vspPubKey = req.VspPubkey
@@ -2629,17 +2628,17 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 		if vspHost == "" {
 			return status.Errorf(codes.InvalidArgument, "vsp host can not be null")
 		}
-		cfg := vsp.Config{
+		cfg := wallet.VSPClientConfig{
 			URL:    vspHost,
 			PubKey: vspPubKey,
 			Dialer: nil,
-			Wallet: wallet,
-			Policy: &vsp.Policy{
+			Wallet: w,
+			Policy: &wallet.VSPPolicy{
 				MaxFee:     0.1e8,
 				FeeAcct:    req.Account,
 				ChangeAcct: req.Account,
 			},
-			Params: wallet.ChainParams(),
+			Params: w.ChainParams(),
 		}
 		vspClient, err = loader.VSP(cfg)
 		if err != nil {
@@ -2659,7 +2658,7 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 	if req.EnableMixing {
 		mixedChange = true
 		mixedAccount = req.MixedAccount
-		_, err = wallet.AccountName(ctx, mixedAccount)
+		_, err = w.AccountName(ctx, mixedAccount)
 		if err != nil {
 			return status.Errorf(codes.InvalidArgument,
 				"Mixing requested, but error on mixed account: %v", err)
@@ -2670,12 +2669,12 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 				"MixedAccountBranch should be 0 or 1.")
 		}
 		mixedSplitAccount = req.MixedSplitAccount
-		_, err = wallet.AccountName(ctx, mixedSplitAccount)
+		_, err = w.AccountName(ctx, mixedSplitAccount)
 		if err != nil {
 			return status.Errorf(codes.InvalidArgument,
 				"Mixing requested, but error on mixedSplitAccount: %v", err)
 		}
-		_, err = wallet.AccountName(ctx, changeAccount)
+		_, err = w.AccountName(ctx, changeAccount)
 		if err != nil {
 			return status.Errorf(codes.InvalidArgument,
 				"Mixing requested, but error on changeAccount: %v", err)
@@ -2686,7 +2685,7 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 	// is defaulted to 20.
 	limit := int(req.Limit)
 
-	tb := ticketbuyer.New(wallet, ticketbuyer.Config{
+	tb := ticketbuyer.New(w, ticketbuyer.Config{
 		BuyTickets:         true,
 		Account:            req.Account,
 		VotingAccount:      req.VotingAccount,
@@ -2709,7 +2708,7 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 			zero(req.Passphrase)
 		}
 
-		err = wallet.Unlock(svr.Context(), req.Passphrase, lock)
+		err = w.Unlock(svr.Context(), req.Passphrase, lock)
 		if err != nil {
 			return translateError(err)
 		}
@@ -4112,12 +4111,12 @@ func (s *walletServer) SyncVSPFailedTickets(ctx context.Context, req *pb.SyncVSP
 	if vspHost == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "vsp host can not be null")
 	}
-	policy := &vsp.Policy{
+	policy := &wallet.VSPPolicy{
 		MaxFee:     0.1e8,
 		FeeAcct:    req.Account,
 		ChangeAcct: req.ChangeAccount,
 	}
-	cfg := vsp.Config{
+	cfg := wallet.VSPClientConfig{
 		URL:    vspHost,
 		PubKey: vspPubKey,
 		Dialer: nil,
@@ -4161,12 +4160,12 @@ func (s *walletServer) ProcessManagedTickets(ctx context.Context, req *pb.Proces
 	if vspHost == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "vsp host can not be null")
 	}
-	policy := &vsp.Policy{
+	policy := &wallet.VSPPolicy{
 		MaxFee:     0.1e8,
 		FeeAcct:    req.FeeAccount,
 		ChangeAcct: req.ChangeAccount,
 	}
-	cfg := vsp.Config{
+	cfg := wallet.VSPClientConfig{
 		URL:    vspHost,
 		PubKey: vspPubKey,
 		Dialer: nil,
@@ -4203,12 +4202,12 @@ func (s *walletServer) ProcessUnmanagedTickets(ctx context.Context, req *pb.Proc
 	if vspHost == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "vsp host can not be null")
 	}
-	policy := &vsp.Policy{
+	policy := &wallet.VSPPolicy{
 		MaxFee:     0.1e8,
 		FeeAcct:    req.FeeAccount,
 		ChangeAcct: req.ChangeAccount,
 	}
-	cfg := vsp.Config{
+	cfg := wallet.VSPClientConfig{
 		URL:    vspHost,
 		PubKey: vspPubKey,
 		Dialer: nil,
@@ -4242,12 +4241,12 @@ func (s *walletServer) SetVspdVoteChoices(ctx context.Context, req *pb.SetVspdVo
 	if vspHost == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "vsp host can not be null")
 	}
-	policy := &vsp.Policy{
+	policy := &wallet.VSPPolicy{
 		MaxFee:     0.1e8,
 		FeeAcct:    req.FeeAccount,
 		ChangeAcct: req.ChangeAccount,
 	}
-	cfg := vsp.Config{
+	cfg := wallet.VSPClientConfig{
 		URL:    vspHost,
 		PubKey: vspPubKey,
 		Dialer: nil,
@@ -4320,7 +4319,7 @@ func (s *walletServer) SetVspdVoteChoices(ctx context.Context, req *pb.SetVspdVo
 	return &pb.SetVspdVoteChoicesResponse{}, nil
 }
 
-func marshalVSPTrackedTickets(tickets []*vsp.TicketInfo) []*pb.GetTrackedVSPTicketsResponse_Ticket {
+func marshalVSPTrackedTickets(tickets []*wallet.VSPTicketInfo) []*pb.GetTrackedVSPTicketsResponse_Ticket {
 	res := make([]*pb.GetTrackedVSPTicketsResponse_Ticket, len(tickets))
 	for i, ticket := range tickets {
 		res[i] = &pb.GetTrackedVSPTicketsResponse_Ticket{

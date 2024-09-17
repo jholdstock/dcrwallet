@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"decred.org/dcrwallet/v5/errors"
-	"decred.org/dcrwallet/v5/vsp"
 	"decred.org/dcrwallet/v5/wallet"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrd/wire"
@@ -43,7 +42,7 @@ type Config struct {
 	MixChange          bool
 
 	// VSP client
-	VSP *vsp.Client
+	VSP *wallet.VSPClient
 }
 
 // TB is an automated ticket buyer, buying as many tickets as possible given an
