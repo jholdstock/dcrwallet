@@ -3374,11 +3374,8 @@ func (s *Server) purchaseTicket(ctx context.Context, icmd any) (any, error) {
 		MixedAccountBranch: mixedAccountBranch,
 		MixedSplitAccount:  mixedSplitAccount,
 		ChangeAccount:      changeAccount,
-	}
 
-	if vspClient != nil {
-		request.VSPFeePaymentProcess = vspClient.Process
-		request.VSPFeePercent = vspClient.FeePercentage
+		VSPClient: vspClient,
 	}
 
 	ticketsResponse, err := w.PurchaseTickets(ctx, n, request)

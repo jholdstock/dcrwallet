@@ -292,12 +292,10 @@ func (tb *TB) buy(ctx context.Context, passphrase []byte, tip *wire.BlockHeader,
 		MixedAccountBranch: mixedBranch,
 		MixedSplitAccount:  splitAccount,
 		ChangeAccount:      changeAccount,
+
+		VSPClient: tb.cfg.VSP,
 	}
-	// If VSP is configured, we need to set the methods for vsp fee processment.
-	if tb.cfg.VSP != nil {
-		purchaseTicketReq.VSPFeePaymentProcess = tb.cfg.VSP.Process
-		purchaseTicketReq.VSPFeePercent = tb.cfg.VSP.FeePercentage
-	}
+
 	tix, err := w.PurchaseTickets(ctx, n, purchaseTicketReq)
 	if tix != nil {
 		for _, hash := range tix.TicketHashes {

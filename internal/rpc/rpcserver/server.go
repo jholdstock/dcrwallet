@@ -1891,11 +1891,8 @@ func (s *walletServer) PurchaseTickets(ctx context.Context,
 		MixedAccountBranch: mixedAccountBranch,
 		MixedSplitAccount:  mixedSplitAccount,
 		ChangeAccount:      changeAccount,
-	}
 
-	if vspClient != nil {
-		request.VSPFeePaymentProcess = vspClient.Process
-		request.VSPFeePercent = vspClient.FeePercentage
+		VSPClient: vspClient,
 	}
 
 	// If dontSignTx is false we unlock the wallet so we can sign the tx.
