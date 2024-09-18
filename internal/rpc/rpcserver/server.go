@@ -179,6 +179,7 @@ type versionServer struct {
 type walletServer struct {
 	ready  atomic.Uint32
 	wallet *wallet.Wallet
+	dialer wallet.DialFunc
 	pb.UnimplementedWalletServiceServer
 }
 
@@ -211,6 +212,7 @@ type accountMixerServer struct {
 type ticketbuyerServer struct {
 	ready  atomic.Uint32
 	loader *loader.Loader
+	dialer wallet.DialFunc
 	pb.UnimplementedTicketBuyerServiceServer
 }
 
@@ -321,13 +323,12 @@ func (*versionServer) Version(ctx context.Context, req *pb.VersionRequest) (*pb.
 	}, nil
 }
 
-type dialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
-
 // StartWalletService starts the WalletService.
-func StartWalletService(server *grpc.Server, wallet *wallet.Wallet) {
+func StartWalletService(server *grpc.Server, wallet *wallet.Wallet, dialer wallet.DialFunc) {
 	if walletService.ready.Swap(1) != 0 {
 		panic("service already started")
 	}
+	walletService.dialer = dialer
 	walletService.wallet = wallet
 }
 
@@ -1807,7 +1808,7 @@ func (s *walletServer) PurchaseTickets(ctx context.Context,
 		cfg := wallet.VSPClientConfig{
 			URL:    req.VspHost,
 			PubKey: req.VspPubkey,
-			Dialer: nil,
+			Dialer: s.dialer,
 			Policy: &wallet.VSPPolicy{
 				MaxFee:     0.1e8,
 				FeeAcct:    req.Account,
@@ -2583,8 +2584,9 @@ func (t *accountMixerServer) checkReady() bool {
 }
 
 // StartTicketBuyerService starts the TicketBuyerService.
-func StartTicketBuyerService(server *grpc.Server, loader *loader.Loader) {
+func StartTicketBuyerService(server *grpc.Server, loader *loader.Loader, dialer wallet.DialFunc) {
 	ticketBuyerService.loader = loader
+	ticketBuyerService.dialer = dialer
 	if ticketBuyerService.ready.Swap(1) != 0 {
 		panic("service already started")
 	}
@@ -2606,7 +2608,7 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 		cfg := wallet.VSPClientConfig{
 			URL:    req.VspHost,
 			PubKey: req.VspPubkey,
-			Dialer: nil,
+			Dialer: t.dialer,
 			Policy: &wallet.VSPPolicy{
 				MaxFee:     0.1e8,
 				FeeAcct:    req.Account,
@@ -4079,7 +4081,7 @@ func (s *walletServer) SyncVSPFailedTickets(ctx context.Context, req *pb.SyncVSP
 	cfg := wallet.VSPClientConfig{
 		URL:    req.VspHost,
 		PubKey: req.VspPubkey,
-		Dialer: nil,
+		Dialer: s.dialer,
 		Policy: &wallet.VSPPolicy{
 			MaxFee:     0.1e8,
 			FeeAcct:    req.Account,
@@ -4117,7 +4119,7 @@ func (s *walletServer) ProcessManagedTickets(ctx context.Context, req *pb.Proces
 	cfg := wallet.VSPClientConfig{
 		URL:    req.VspHost,
 		PubKey: req.VspPubkey,
-		Dialer: nil,
+		Dialer: s.dialer,
 		Policy: &wallet.VSPPolicy{
 			MaxFee:     0.1e8,
 			FeeAcct:    req.FeeAccount,
@@ -4148,7 +4150,7 @@ func (s *walletServer) ProcessUnmanagedTickets(ctx context.Context, req *pb.Proc
 	cfg := wallet.VSPClientConfig{
 		URL:    req.VspHost,
 		PubKey: req.VspPubkey,
-		Dialer: nil,
+		Dialer: s.dialer,
 		Policy: &wallet.VSPPolicy{
 			MaxFee:     0.1e8,
 			FeeAcct:    req.FeeAccount,
@@ -4176,7 +4178,7 @@ func (s *walletServer) SetVspdVoteChoices(ctx context.Context, req *pb.SetVspdVo
 	cfg := wallet.VSPClientConfig{
 		URL:    req.VspHost,
 		PubKey: req.VspPubkey,
-		Dialer: nil,
+		Dialer: s.dialer,
 		Policy: &wallet.VSPPolicy{
 			MaxFee:     0.1e8,
 			FeeAcct:    req.FeeAccount,
