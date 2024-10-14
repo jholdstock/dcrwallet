@@ -26,7 +26,6 @@ import (
 	"decred.org/dcrwallet/v5/internal/rpc/rpcserver"
 	"decred.org/dcrwallet/v5/p2p"
 	"decred.org/dcrwallet/v5/spv"
-	"decred.org/dcrwallet/v5/ticketbuyer"
 	"decred.org/dcrwallet/v5/version"
 	"decred.org/dcrwallet/v5/wallet"
 	"github.com/decred/dcrd/addrmgr/v2"
@@ -332,7 +331,7 @@ func run(ctx context.Context) error {
 			}
 
 			// Start a ticket buyer.
-			tb := ticketbuyer.New(w, ticketbuyer.Config{
+			tb := w.NewTicketBuyer(wallet.TicketBuyerConfig{
 				BuyTickets:         cfg.EnableTicketBuyer,
 				Account:            purchaseAccount,
 				Maintain:           cfg.TBOpts.BalanceToMaintainAbsolute.Amount,

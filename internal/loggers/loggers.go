@@ -1,4 +1,4 @@
-// Copyright (c) 2023 The Decred developers
+// Copyright (c) 2023-2024 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -46,7 +46,6 @@ var (
 	MainLog    = backendLog.Logger("DCRW")
 	LoaderLog  = backendLog.Logger("LODR")
 	WalletLog  = backendLog.Logger("WLLT")
-	TkbyLog    = backendLog.Logger("TKBY")
 	SyncLog    = backendLog.Logger("SYNC")
 	PeerLog    = backendLog.Logger("PEER")
 	GrpcLog    = backendLog.Logger("GRPC")

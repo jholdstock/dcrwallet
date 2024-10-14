@@ -38,7 +38,6 @@ import (
 	"decred.org/dcrwallet/v5/p2p"
 	pb "decred.org/dcrwallet/v5/rpc/walletrpc"
 	"decred.org/dcrwallet/v5/spv"
-	"decred.org/dcrwallet/v5/ticketbuyer"
 	"decred.org/dcrwallet/v5/wallet"
 	"decred.org/dcrwallet/v5/wallet/txauthor"
 	"decred.org/dcrwallet/v5/wallet/txrules"
@@ -2535,12 +2534,12 @@ func StartAccountMixerService(server *grpc.Server, loader *loader.Loader) {
 
 // RunAccountMixer starts the automatic account mixer for the service.
 func (t *accountMixerServer) RunAccountMixer(req *pb.RunAccountMixerRequest, svr pb.AccountMixerService_RunAccountMixerServer) error {
-	wallet, ok := t.loader.LoadedWallet()
+	w, ok := t.loader.LoadedWallet()
 	if !ok {
 		return status.Errorf(codes.FailedPrecondition, "Wallet has not been loaded")
 	}
 
-	tb := ticketbuyer.New(wallet, ticketbuyer.Config{
+	tb := w.NewTicketBuyer(wallet.TicketBuyerConfig{
 		Mixing:             true,
 		MixedAccountBranch: req.MixedAccountBranch,
 		MixedAccount:       req.MixedAccount,
@@ -2557,7 +2556,7 @@ func (t *accountMixerServer) RunAccountMixer(req *pb.RunAccountMixerRequest, svr
 			zero(req.Passphrase)
 		}
 
-		err := wallet.Unlock(svr.Context(), req.Passphrase, lock)
+		err := w.Unlock(svr.Context(), req.Passphrase, lock)
 		if err != nil {
 			return translateError(err)
 		}
@@ -2654,7 +2653,7 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 	// is defaulted to 20.
 	limit := int(req.Limit)
 
-	tb := ticketbuyer.New(w, ticketbuyer.Config{
+	tb := w.NewTicketBuyer(wallet.TicketBuyerConfig{
 		BuyTickets:         true,
 		Account:            req.Account,
 		VotingAccount:      req.VotingAccount,

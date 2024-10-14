@@ -1,5 +1,5 @@
 // Copyright (c) 2013-2017 The btcsuite developers
-// Copyright (c) 2015-2018 The Decred developers
+// Copyright (c) 2015-2024 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -15,7 +15,6 @@ import (
 	"decred.org/dcrwallet/v5/internal/rpc/rpcserver"
 	"decred.org/dcrwallet/v5/p2p"
 	"decred.org/dcrwallet/v5/spv"
-	"decred.org/dcrwallet/v5/ticketbuyer"
 	"decred.org/dcrwallet/v5/wallet"
 	"decred.org/dcrwallet/v5/wallet/udb"
 	"github.com/decred/dcrd/connmgr/v3"
@@ -30,7 +29,6 @@ func init() {
 	loader.UseLogger(loggers.LoaderLog)
 	wallet.UseLogger(loggers.WalletLog)
 	udb.UseLogger(loggers.WalletLog)
-	ticketbuyer.UseLogger(loggers.TkbyLog)
 	chain.UseLogger(loggers.SyncLog)
 	spv.UseLogger(loggers.SyncLog)
 	p2p.UseLogger(loggers.PeerLog)
@@ -46,7 +44,6 @@ var subsystemLoggers = map[string]slog.Logger{
 	"DCRW": loggers.MainLog,
 	"LODR": loggers.LoaderLog,
 	"WLLT": loggers.WalletLog,
-	"TKBY": loggers.TkbyLog,
 	"SYNC": loggers.SyncLog,
 	"PEER": loggers.PeerLog,
 	"GRPC": loggers.GrpcLog,

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package ticketbuyer
+package wallet
 
 import (
 	"context"
@@ -10,15 +10,14 @@ import (
 	"sync"
 
 	"decred.org/dcrwallet/v5/errors"
-	"decred.org/dcrwallet/v5/wallet"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrd/wire"
 )
 
 const minconf = 1
 
-// Config modifies the behavior of TB.
-type Config struct {
+// TicketBuyerConfig modifies the behavior of TicketBuyer.
+type TicketBuyerConfig struct {
 	BuyTickets bool
 
 	// Account to buy tickets from
@@ -42,28 +41,28 @@ type Config struct {
 	MixChange          bool
 
 	// VSP client
-	VSP *wallet.VSPClient
+	VSP *VSPClient
 }
 
-// TB is an automated ticket buyer, buying as many tickets as possible given an
-// account's available balance. TB may optionally be configured to register
-// purchased tickets with a VSP.
-type TB struct {
-	wallet *wallet.Wallet
+// TicketBuyer is an automated ticket buyer, buying as many tickets as possible
+// given an account's available balance. TicketBuyer may optionally be
+// configured to register purchased tickets with a VSP.
+type TicketBuyer struct {
+	wallet *Wallet
 
-	cfg Config
+	cfg TicketBuyerConfig
 	mu  sync.Mutex
 }
 
-// New returns a new TB to buy tickets from a wallet.
-func New(w *wallet.Wallet, cfg Config) *TB {
-	return &TB{wallet: w, cfg: cfg}
+// NewTicketBuyer returns a new TicketBuyer to buy tickets from a wallet.
+func (w *Wallet) NewTicketBuyer(cfg TicketBuyerConfig) *TicketBuyer {
+	return &TicketBuyer{wallet: w, cfg: cfg}
 }
 
 // Run executes the ticket buyer.  If the private passphrase is incorrect, or
 // ever becomes incorrect due to a wallet passphrase change, Run exits with an
 // errors.Passphrase error.
-func (tb *TB) Run(ctx context.Context, passphrase []byte) error {
+func (tb *TicketBuyer) Run(ctx context.Context, passphrase []byte) error {
 	if len(passphrase) > 0 {
 		err := tb.wallet.Unlock(ctx, passphrase, nil)
 		if err != nil {
@@ -197,8 +196,8 @@ func (tb *TB) Run(ctx context.Context, passphrase []byte) error {
 	}
 }
 
-func (tb *TB) buy(ctx context.Context, passphrase []byte, tip *wire.BlockHeader, expiry int32,
-	cfg *Config) error {
+func (tb *TicketBuyer) buy(ctx context.Context, passphrase []byte, tip *wire.BlockHeader, expiry int32,
+	cfg *TicketBuyerConfig) error {
 	ctx, task := trace.NewTask(ctx, "ticketbuyer.buy")
 	defer task.End()
 
@@ -216,7 +215,7 @@ func (tb *TB) buy(ctx context.Context, passphrase []byte, tip *wire.BlockHeader,
 	if err != nil {
 		return err
 	}
-	ctx, cancel := wallet.WrapNetworkBackendContext(n, ctx)
+	ctx, cancel := WrapNetworkBackendContext(n, ctx)
 	defer cancel()
 
 	if len(passphrase) > 0 {
@@ -281,7 +280,7 @@ func (tb *TB) buy(ctx context.Context, passphrase []byte, tip *wire.BlockHeader,
 		buy = limit
 	}
 
-	purchaseTicketReq := &wallet.PurchaseTicketsRequest{
+	purchaseTicketReq := &PurchaseTicketsRequest{
 		Count:         buy,
 		SourceAccount: account,
 		MinConf:       minconf,
@@ -311,13 +310,13 @@ func (tb *TB) buy(ctx context.Context, passphrase []byte, tip *wire.BlockHeader,
 // config is protected by a mutex and this function is safe for concurrent
 // access to read or modify the config.  It is unsafe to leak a pointer to the
 // config, but a copy of *cfg is legal.
-func (tb *TB) AccessConfig(f func(cfg *Config)) {
+func (tb *TicketBuyer) AccessConfig(f func(cfg *TicketBuyerConfig)) {
 	tb.mu.Lock()
 	f(&tb.cfg)
 	tb.mu.Unlock()
 }
 
-func (tb *TB) mixChange(ctx context.Context, cfg *Config) error {
+func (tb *TicketBuyer) mixChange(ctx context.Context, cfg *TicketBuyerConfig) error {
 	// Read config
 	mixing := cfg.Mixing
 	mixedAccount := cfg.MixedAccount
