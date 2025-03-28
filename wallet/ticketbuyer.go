@@ -186,12 +186,12 @@ func (tb *TicketBuyer) Run(ctx context.Context, passphrase []byte) error {
 			for i := 0; cfg.BuyTickets && i < multiple; i++ {
 				go buyTickets()
 			}
-			go func() {
-				err := tb.mixChange(ctx, &cfg)
-				if err != nil {
-					log.Error(err)
-				}
-			}()
+
+			// Mix change account into mixed account if requested.
+			if cfg.MixChange && cfg.Mixing {
+
+			}
+
 		}
 	}
 }
@@ -314,22 +314,4 @@ func (tb *TicketBuyer) AccessConfig(f func(cfg *TicketBuyerConfig)) {
 	tb.mu.Lock()
 	f(&tb.cfg)
 	tb.mu.Unlock()
-}
-
-func (tb *TicketBuyer) mixChange(ctx context.Context, cfg *TicketBuyerConfig) error {
-	// Read config
-	mixing := cfg.Mixing
-	mixedAccount := cfg.MixedAccount
-	mixedBranch := cfg.MixedAccountBranch
-	changeAccount := cfg.ChangeAccount
-	mixChange := cfg.MixChange
-
-	if !mixChange || !mixing {
-		return nil
-	}
-
-	ctx, task := trace.NewTask(ctx, "ticketbuyer.mixChange")
-	defer task.End()
-
-	return tb.wallet.MixAccount(ctx, changeAccount, mixedAccount, mixedBranch)
 }
