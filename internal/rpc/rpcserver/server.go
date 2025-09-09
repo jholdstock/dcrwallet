@@ -174,7 +174,6 @@ type walletServer struct {
 // loaderServer provides RPC clients with the ability to load and close wallets,
 // as well as establishing a RPC connection to a dcrd consensus server.
 type loaderServer struct {
-	ready     atomic.Uint32
 	loader    *loader.Loader
 	activeNet *netparams.Params
 	pb.UnimplementedWalletLoaderServiceServer
@@ -204,7 +203,6 @@ type ticketbuyerServer struct {
 }
 
 type agendaServer struct {
-	ready     atomic.Uint32
 	activeNet *chaincfg.Params
 	pb.UnimplementedAgendaServiceServer
 }
@@ -2504,13 +2502,6 @@ func (s *walletServer) ConfirmationNotifications(svr pb.WalletService_Confirmati
 func StartWalletLoaderService(server *grpc.Server, loader *loader.Loader, activeNet *netparams.Params) {
 	loaderService.loader = loader
 	loaderService.activeNet = activeNet
-	if loaderService.ready.Swap(1) != 0 {
-		panic("service already started")
-	}
-}
-
-func (s *loaderServer) checkReady() bool {
-	return s.ready.Load() != 0
 }
 
 // StartAccountMixerService starts the AccountMixerService.
@@ -3179,13 +3170,6 @@ func (s *seedServer) DecodeSeed(ctx context.Context, req *pb.DecodeSeedRequest) 
 
 func StartAgendaService(server *grpc.Server, activeNet *chaincfg.Params) {
 	agendaService.activeNet = activeNet
-	if agendaService.ready.Swap(1) != 0 {
-		panic("service already started")
-	}
-}
-
-func (s *agendaServer) checkReady() bool {
-	return s.ready.Load() != 0
 }
 
 func (s *agendaServer) Agendas(ctx context.Context, req *pb.AgendasRequest) (*pb.AgendasResponse, error) {
