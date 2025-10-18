@@ -333,20 +333,23 @@ func run(ctx context.Context) error {
 			}
 
 			// Start a ticket buyer.
-			tb := ticketbuyer.New(w, ticketbuyer.Config{
-				BuyTickets:         cfg.EnableTicketBuyer,
-				Account:            purchaseAccount,
-				Maintain:           cfg.TBOpts.BalanceToMaintainAbsolute.Amount,
-				Limit:              int(cfg.TBOpts.Limit),
-				VotingAccount:      votingAccount,
-				Mixing:             cfg.MixingEnabled,
-				MixChange:          cfg.MixChange,
-				MixedAccount:       mixedAccount,
-				MixedAccountBranch: cfg.mixedBranch,
-				TicketSplitAccount: ticketSplitAccount,
-				ChangeAccount:      changeAccount,
-				VSP:                vspClient,
-			})
+			tb := ticketbuyer.New(w,
+				w.ChainParams(),
+				w.NtfnServer,
+				ticketbuyer.Config{
+					BuyTickets:         cfg.EnableTicketBuyer,
+					Account:            purchaseAccount,
+					Maintain:           cfg.TBOpts.BalanceToMaintainAbsolute.Amount,
+					Limit:              int(cfg.TBOpts.Limit),
+					VotingAccount:      votingAccount,
+					Mixing:             cfg.MixingEnabled,
+					MixChange:          cfg.MixChange,
+					MixedAccount:       mixedAccount,
+					MixedAccountBranch: cfg.mixedBranch,
+					TicketSplitAccount: ticketSplitAccount,
+					ChangeAccount:      changeAccount,
+					VSP:                vspClient,
+				})
 
 			log.Infof("Starting auto transaction creator")
 			tbdone := make(chan struct{})

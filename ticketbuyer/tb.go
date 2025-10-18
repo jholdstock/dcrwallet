@@ -11,6 +11,7 @@ import (
 
 	"decred.org/dcrwallet/v5/errors"
 	"decred.org/dcrwallet/v5/wallet"
+	"github.com/decred/dcrd/chaincfg/v3"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrd/wire"
 )
@@ -49,15 +50,22 @@ type Config struct {
 // account's available balance. TB may optionally be configured to register
 // purchased tickets with a VSP.
 type TB struct {
-	wallet *wallet.Wallet
+	wallet     *wallet.Wallet
+	params     *chaincfg.Params
+	ntfnServer *wallet.NotificationServer
 
 	cfg Config
 	mu  sync.Mutex
 }
 
 // New returns a new TB to buy tickets from a wallet.
-func New(w *wallet.Wallet, cfg Config) *TB {
-	return &TB{wallet: w, cfg: cfg}
+func New(w *wallet.Wallet, params *chaincfg.Params, ntfnServer *wallet.NotificationServer, cfg Config) *TB {
+	return &TB{
+		wallet:     w,
+		params:     params,
+		ntfnServer: ntfnServer,
+		cfg:        cfg,
+	}
 }
 
 // Run executes the ticket buyer.  If the private passphrase is incorrect, or
@@ -71,7 +79,7 @@ func (tb *TB) Run(ctx context.Context, passphrase []byte) error {
 		}
 	}
 
-	c := tb.wallet.NtfnServer.MainTipChangedNotifications()
+	c := tb.ntfnServer.MainTipChangedNotifications()
 	defer c.Done()
 
 	ctx, outerCancel := context.WithCancel(ctx)
@@ -129,7 +137,7 @@ func (tb *TB) Run(ctx context.Context, passphrase []byte) error {
 				}
 				cancels = cancels[:0]
 
-				intervalSize := int32(w.ChainParams().StakeDiffWindowSize)
+				intervalSize := int32(tb.params.StakeDiffWindowSize)
 				currentInterval := height / intervalSize
 				nextIntervalStart = (currentInterval + 1) * intervalSize
 
@@ -268,12 +276,12 @@ func (tb *TB) buy(ctx context.Context, passphrase []byte, tip *wire.BlockHeader,
 			log.Debugf("Skipping purchase: low available balance")
 			return nil
 		}
-		max := int(w.ChainParams().MaxFreshStakePerBlock)
+		max := int(tb.params.MaxFreshStakePerBlock)
 		if buy > max {
 			buy = max
 		}
 	} else {
-		buy = int(w.ChainParams().MaxFreshStakePerBlock)
+		buy = int(tb.params.MaxFreshStakePerBlock)
 	}
 	if limit == 0 && mixing {
 		buy = 1

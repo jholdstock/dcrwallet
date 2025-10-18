@@ -2529,7 +2529,10 @@ func StartAccountMixerService(wallet *wallet.Wallet) {
 // RunAccountMixer starts the automatic account mixer for the service.
 func (t *accountMixerServer) RunAccountMixer(req *pb.RunAccountMixerRequest, svr pb.AccountMixerService_RunAccountMixerServer) error {
 	wallet := t.wallet
-	tb := ticketbuyer.New(wallet, ticketbuyer.Config{
+	tb := ticketbuyer.New(wallet,
+		wallet.ChainParams(),
+		wallet.NtfnServer,
+		ticketbuyer.Config{
 		Mixing:             true,
 		MixedAccountBranch: req.MixedAccountBranch,
 		MixedAccount:       req.MixedAccount,
@@ -2643,7 +2646,10 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 		}
 	}
 
-	tb := ticketbuyer.New(w, ticketbuyer.Config{
+	tb := ticketbuyer.New(w,
+		w.ChainParams(),
+		w.NtfnServer,
+		ticketbuyer.Config{
 		BuyTickets:         true,
 		Account:            req.Account,
 		VotingAccount:      req.VotingAccount,
