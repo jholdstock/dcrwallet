@@ -2529,17 +2529,18 @@ func StartAccountMixerService(wallet *wallet.Wallet) {
 // RunAccountMixer starts the automatic account mixer for the service.
 func (t *accountMixerServer) RunAccountMixer(req *pb.RunAccountMixerRequest, svr pb.AccountMixerService_RunAccountMixerServer) error {
 	wallet := t.wallet
+	client := wallet.NtfnServer.MainTipChangedNotifications()
 	tb := ticketbuyer.New(wallet,
 		wallet.ChainParams(),
-		wallet.NtfnServer,
+		client,
 		ticketbuyer.Config{
-		Mixing:             true,
-		MixedAccountBranch: req.MixedAccountBranch,
-		MixedAccount:       req.MixedAccount,
-		ChangeAccount:      req.ChangeAccount,
-		BuyTickets:         false,
-		MixChange:          true,
-	})
+			Mixing:             true,
+			MixedAccountBranch: req.MixedAccountBranch,
+			MixedAccount:       req.MixedAccount,
+			ChangeAccount:      req.ChangeAccount,
+			BuyTickets:         false,
+			MixChange:          true,
+		})
 
 	if len(req.Passphrase) > 0 {
 		lock := make(chan time.Time, 1)
@@ -2563,6 +2564,8 @@ func (t *accountMixerServer) RunAccountMixer(req *pb.RunAccountMixerRequest, svr
 		}
 		return status.Errorf(codes.Unknown, "AccountMixer instance errored: %v", err)
 	}
+
+	client.Done()
 
 	return nil
 }
@@ -2645,24 +2648,24 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 				"Mixing requested, but error on changeAccount: %v", err)
 		}
 	}
-
+	client := w.NtfnServer.MainTipChangedNotifications()
 	tb := ticketbuyer.New(w,
 		w.ChainParams(),
-		w.NtfnServer,
+		client,
 		ticketbuyer.Config{
-		BuyTickets:         true,
-		Account:            req.Account,
-		VotingAccount:      req.VotingAccount,
-		Maintain:           dcrutil.Amount(req.BalanceToMaintain),
-		VSP:                vspClient,
-		Mixing:             req.EnableMixing,
-		MixedAccount:       mixedAccount,
-		MixChange:          mixedChange,
-		ChangeAccount:      changeAccount,
-		MixedAccountBranch: mixedAccountBranch,
-		TicketSplitAccount: mixedSplitAccount,
-		Limit:              int(req.Limit),
-	})
+			BuyTickets:         true,
+			Account:            req.Account,
+			VotingAccount:      req.VotingAccount,
+			Maintain:           dcrutil.Amount(req.BalanceToMaintain),
+			VSP:                vspClient,
+			Mixing:             req.EnableMixing,
+			MixedAccount:       mixedAccount,
+			MixChange:          mixedChange,
+			ChangeAccount:      changeAccount,
+			MixedAccountBranch: mixedAccountBranch,
+			TicketSplitAccount: mixedSplitAccount,
+			Limit:              int(req.Limit),
+		})
 
 	if len(req.Passphrase) > 0 {
 		lock := make(chan time.Time, 1)
@@ -2686,6 +2689,8 @@ func (t *ticketbuyerServer) RunTicketBuyer(req *pb.RunTicketBuyerRequest, svr pb
 		}
 		return status.Errorf(codes.Unknown, "TicketBuyer instance errored: %v", err)
 	}
+
+	client.Done()
 
 	return nil
 }

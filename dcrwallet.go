@@ -332,10 +332,11 @@ func run(ctx context.Context) error {
 				return err
 			}
 
+			client := w.NtfnServer.MainTipChangedNotifications()
 			// Start a ticket buyer.
 			tb := ticketbuyer.New(w,
 				w.ChainParams(),
-				w.NtfnServer,
+				client,
 				ticketbuyer.Config{
 					BuyTickets:         cfg.EnableTicketBuyer,
 					Account:            purchaseAccount,
@@ -358,6 +359,7 @@ func run(ctx context.Context) error {
 				if err != nil && !errors.Is(err, context.Canceled) {
 					log.Errorf("Transaction creator ended: %v", err)
 				}
+				client.Done()
 				tbdone <- struct{}{}
 			}()
 			defer func() { <-tbdone }()

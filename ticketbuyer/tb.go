@@ -8,9 +8,11 @@ import (
 	"context"
 	"runtime/trace"
 	"sync"
+	"time"
 
 	"decred.org/dcrwallet/v5/errors"
 	"decred.org/dcrwallet/v5/wallet"
+	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/chaincfg/v3"
 	"github.com/decred/dcrd/dcrutil/v4"
 	"github.com/decred/dcrd/wire"
@@ -46,20 +48,31 @@ type Config struct {
 	VSP *wallet.VSPClient
 }
 
+type tbWallet interface {
+	Unlock(ctx context.Context, passphrase []byte, timeout <-chan time.Time) error
+	RescanPoint(ctx context.Context) (*chainhash.Hash, error)
+	BlockHeader(ctx context.Context, blockHash *chainhash.Hash) (*wire.BlockHeader, error)
+	NetworkBackend() (wallet.NetworkBackend, error)
+	PurchaseTickets(ctx context.Context, n wallet.NetworkBackend, req *wallet.PurchaseTicketsRequest) (*wallet.PurchaseTicketsResponse, error)
+	NextStakeDifficultyAfterHeader(ctx context.Context, h *wire.BlockHeader) (dcrutil.Amount, error)
+	AccountBalance(ctx context.Context, account uint32, confirms int32) (wallet.Balances, error)
+	MixAccount(ctx context.Context, changeAccount, mixAccount, mixBranch uint32) error
+}
+
 // TB is an automated ticket buyer, buying as many tickets as possible given an
 // account's available balance. TB may optionally be configured to register
 // purchased tickets with a VSP.
 type TB struct {
-	wallet     *wallet.Wallet
+	wallet     tbWallet
 	params     *chaincfg.Params
-	ntfnServer *wallet.NotificationServer
+	ntfnServer wallet.MainTipChangedNotificationsClient
 
 	cfg Config
 	mu  sync.Mutex
 }
 
 // New returns a new TB to buy tickets from a wallet.
-func New(w *wallet.Wallet, params *chaincfg.Params, ntfnServer *wallet.NotificationServer, cfg Config) *TB {
+func New(w tbWallet, params *chaincfg.Params, ntfnServer wallet.MainTipChangedNotificationsClient, cfg Config) *TB {
 	return &TB{
 		wallet:     w,
 		params:     params,
@@ -79,9 +92,6 @@ func (tb *TB) Run(ctx context.Context, passphrase []byte) error {
 		}
 	}
 
-	c := tb.ntfnServer.MainTipChangedNotifications()
-	defer c.Done()
-
 	ctx, outerCancel := context.WithCancel(ctx)
 	defer outerCancel()
 	var fatal error
@@ -100,7 +110,7 @@ func (tb *TB) Run(ctx context.Context, passphrase []byte) error {
 				return err
 			}
 			return ctx.Err()
-		case n := <-c.C:
+		case n := <-tb.ntfnServer.C:
 			if len(n.AttachedBlocks) == 0 {
 				continue
 			}
