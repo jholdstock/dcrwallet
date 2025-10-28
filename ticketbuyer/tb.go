@@ -57,6 +57,19 @@ type TB struct {
 
 // New returns a new TB to buy tickets from a wallet.
 func New(w *wallet.Wallet, cfg Config) *TB {
+	// Enhance user privacy when mixing is enabled by limiting to one ticket
+	// purchase per block. Otherwise just ensure limit has a sane value from 1
+	// to MaxFreshStakePerBlock (zero translates to max).
+	switch {
+	case cfg.Mixing:
+		cfg.Limit = 1
+	default:
+		maxLimit := int(w.ChainParams().MaxFreshStakePerBlock)
+		if cfg.Limit < 1 || cfg.Limit > maxLimit {
+			cfg.Limit = maxLimit
+		}
+	}
+
 	return &TB{wallet: w, cfg: cfg}
 }
 
@@ -245,40 +258,21 @@ func (tb *TB) buy(ctx context.Context, passphrase []byte, tip *wire.BlockHeader,
 		minconf = 2
 	}
 
-	sdiff, err := w.NextStakeDifficultyAfterHeader(ctx, tip)
+	bal, err := w.AccountBalance(ctx, account, minconf)
 	if err != nil {
 		return err
 	}
 
-	// Determine how many tickets to buy
-	var buy int
-	if maintain != 0 {
-		bal, err := w.AccountBalance(ctx, account, minconf)
-		if err != nil {
-			return err
-		}
-		spendable := bal.Spendable
-		if spendable < maintain {
-			log.Debugf("Skipping purchase: low available balance")
-			return nil
-		}
-		spendable -= maintain
-		buy = int(spendable / sdiff)
-		if buy == 0 {
-			log.Debugf("Skipping purchase: low available balance")
-			return nil
-		}
-		max := int(w.ChainParams().MaxFreshStakePerBlock)
-		if buy > max {
-			buy = max
-		}
-	} else {
-		buy = int(w.ChainParams().MaxFreshStakePerBlock)
-	}
-	if limit == 0 && mixing {
-		buy = 1
-	} else if limit > 0 && buy > limit {
-		buy = limit
+	// Determine how many tickets can be bought with the currently available
+	// balance, remembering to subtract balance to maintain.
+	buy := int((bal.Spendable - maintain) / sdiff)
+
+	// Don't buy more than the max configured limit.
+	buy = min(buy, limit)
+
+	if buy <= 0 {
+		log.Debugf("Skipping purchase: low available balance")
+		return nil
 	}
 
 	purchaseTicketReq := &wallet.PurchaseTicketsRequest{
