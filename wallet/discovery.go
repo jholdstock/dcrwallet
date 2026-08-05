@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 The Decred developers
+// Copyright (c) 2015-2026 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"decred.org/dcrwallet/v5/errors"
-	"decred.org/dcrwallet/v5/validate"
 	"decred.org/dcrwallet/v5/wallet/udb"
 	"decred.org/dcrwallet/v5/wallet/walletdb"
 	"github.com/decred/dcrd/blockchain/stake/v5"
@@ -346,15 +345,6 @@ func (a *addrFinder) filter(ctx context.Context, fs []*udb.BlockCFilter, data bl
 			}
 			for i, b := range blocks {
 				g.Go(func() error {
-					// validate blocks
-					err := validate.MerkleRoots(b)
-					if err != nil {
-						err = validate.DCP0005MerkleRoot(b)
-					}
-					if err != nil {
-						return err
-					}
-
 					c := blockCommitments(b)
 					a.mu.Lock()
 					a.commitments[*fetch[i]] = c
