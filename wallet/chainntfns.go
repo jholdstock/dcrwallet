@@ -1,5 +1,5 @@
 // Copyright (c) 2013-2015 The btcsuite developers
-// Copyright (c) 2015-2025 The Decred developers
+// Copyright (c) 2015-2026 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -376,6 +376,48 @@ func (w *Wallet) AddTransaction(ctx context.Context, tx *wire.MsgTx, blockHash *
 			*meta, err = w.txStore.GetBlockMetaForHash(txmgrNs, blockHash)
 			if err != nil {
 				return err
+			}
+		}
+
+		// If the transaction is unmined, inputs which reference UTXOs owned by
+		// this wallet require extra scrutiny before the transaction is
+		// accepted. This is necessary because a malicious SPV peer could relay
+		// a forged transaction which falsely claims to spend a UTXO from this
+		// wallet.
+		// Mined transactions do not need these extra checks because they have
+		// already been validated by consensus.
+		if header == nil {
+			for i, in := range rec.MsgTx.TxIn {
+				prevOut := &in.PreviousOutPoint
+				credit, err := w.txStore.UnspentOutput(txmgrNs, *prevOut, true)
+				if errors.Is(err, errors.NotExist) {
+					// Not a UTXO belonging to this wallet, skip.
+					continue
+				}
+				if err != nil {
+					return errors.E(op, err)
+				}
+
+				// UTXOs are keyed in the DB without their transaction tree, so
+				// an explicit check is needed to validate tree.
+				if credit.OutPoint != *prevOut {
+					return errors.E(op, errors.ScriptFailure, errors.Errorf(
+						"input %d spends %v from the wrong transaction tree", i, prevOut))
+				}
+
+				// ValueIn is not committed to by the signature hash, so script
+				// execution below does not cover it.
+				if in.ValueIn != int64(credit.Amount) {
+					return errors.E(op, errors.ScriptFailure, errors.Errorf(
+						"input %d claims value %v for %v which is worth %v", i,
+						dcrutil.Amount(in.ValueIn), prevOut, credit.Amount))
+				}
+
+				// Validate the signature.
+				err = validateTxInput(op, tx, i, credit.PkScript)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
